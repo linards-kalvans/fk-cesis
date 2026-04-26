@@ -1,0 +1,7 @@
+---
+profile: production
+skip_list: []
+warn_list: []
+exclude_paths:
+  - .git/
+  - docs/html/

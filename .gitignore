@@ -1,2 +1,18 @@
 # Git worktrees
 .worktrees/
+
+# Local Ansible secrets and runtime artifacts
+.ansible/
+*.retry
+.vault-pass
+vault-pass.txt
+ansible/group_vars/*/vault.local.yml
+
+# Generated service secrets must never be committed
+.env
+/opt/football-club/.env
+
+# Real identity documents must never be committed
+*.id-photo.jpg
+*.id-photo.jpeg
+*.id-photo.png
