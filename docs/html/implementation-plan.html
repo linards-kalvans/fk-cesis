@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Implementation Plan — Football Club Stack</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+:root {
+  --ink: #0E0E0E;
+  --paper: #F5F3EE;
+  --paper2: #EDEAE3;
+  --cream: #FAF8F4;
+  --border: #D4CEBC;
+  --muted: #8C8470;
+
+  --p1: #1B4332;   /* Phase 1 — deep forest */
+  --p1l: #D8F0E4;
+  --p2: #1A3A6E;   /* Phase 2 — navy */
+  --p2l: #D6E4F7;
+  --p3: #7C2D12;   /* Phase 3 — terra */
+  --p3l: #FDEADC;
+  --p4: #4A1D96;   /* Phase 4 — plum */
+  --p4l: #EDE9FE;
+  --p5: #14532D;   /* Phase 5 — emerald */
+  --p5l: #DCFCE7;
+
+  --ok: #166534;
+  --ok-bg: #DCFCE7;
+  --warn: #92400E;
+  --warn-bg: #FEF3C7;
+  --risk: #991B1B;
+  --risk-bg: #FEE2E2;
+
+  --heading: 'Syne', sans-serif;
+  --mono: 'Syne Mono', monospace;
+  --body: 'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13.5px;
+  line-height: 1.65;
+  padding: 36px 28px;
+  max-width: 1020px;
+  margin: 0 auto;
+}
+
+/* ─── MASTHEAD ─── */
+.masthead {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 18px;
+  margin-bottom: 32px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 20px;
+}
+.masthead-title {
+  font-family: var(--heading);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.masthead-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  margin-top: 6px;
+}
+.masthead-meta {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+/* ─── SECTION HEADERS ─── */
+.section { margin-bottom: 36px; }
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.section-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.section-title {
+  font-family: var(--heading);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+/* ─── TIMELINE GANTT ─── */
+.gantt-wrap {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+  overflow-x: auto;
+}
+.gantt-header {
+  display: grid;
+  grid-template-columns: 160px repeat(20, 1fr);
+  gap: 0;
+  margin-bottom: 6px;
+}
+.gantt-wk {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.gantt-wk.month-start {
+  color: var(--ink);
+  font-weight: 500;
+  border-bottom: 1px solid var(--ink);
+}
+.gantt-row {
+  display: grid;
+  grid-template-columns: 160px repeat(20, 1fr);
+  gap: 0;
+  align-items: center;
+  min-height: 30px;
+  border-bottom: 1px solid var(--border);
+}
+.gantt-row:last-child { border-bottom: none; }
+.gantt-label {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 8px 6px 0;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.gantt-cell { height: 30px; position: relative; }
+.gantt-bar {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 1px;
+  right: 1px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.gantt-group-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 10px 0 4px;
+  grid-column: 1 / -1;
+}
+.milestone-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.milestone-diamond {
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  flex-shrink: 0;
+}
+
+/* ─── PHASE CARDS ─── */
+.phase-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  background: var(--cream);
+}
+.phase-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.phase-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 2px;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+.phase-title-group { }
+.phase-title {
+  font-family: var(--heading);
+  font-size: 15px;
+  font-weight: 700;
+}
+.phase-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.phase-duration {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.phase-body { padding: 18px; }
+
+/* ─── TASK GRID ─── */
+.task-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.task-col-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.task-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+}
+.task-item:last-child { margin-bottom: 0; }
+.task-check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  background: white;
+}
+.task-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.task-text .tool-tag {
+  display: inline;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--paper2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--muted);
+}
+
+/* ─── TEST TABLE ─── */
+.test-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.test-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: 7px 10px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.test-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.test-table tr:last-child td { border-bottom: none; }
+.test-table tr:nth-child(even) td { background: var(--paper2); }
+.pass { color: var(--ok); font-family: var(--mono); font-size: 10px; font-weight: 500; }
+.manual { color: var(--warn); font-family: var(--mono); font-size: 10px; font-weight: 500; }
+.automated { color: var(--p2); font-family: var(--mono); font-size: 10px; font-weight: 500; }
+
+/* ─── CALLOUTS ─── */
+.callout {
+  border-radius: 3px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.callout.ok { background: var(--ok-bg); color: var(--ok); border-left: 3px solid var(--ok); }
+.callout.warn { background: var(--warn-bg); color: var(--warn); border-left: 3px solid #D97706; }
+.callout.risk { background: var(--risk-bg); color: var(--risk); border-left: 3px solid var(--risk); }
+.callout.info { background: var(--p2l); color: var(--p2); border-left: 3px solid var(--p2); }
+.callout strong { font-weight: 600; }
+
+/* ─── EFFORT TABLE ─── */
+.effort-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.effort-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  background: white;
+}
+.effort-phase {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.effort-hours {
+  font-family: var(--heading);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.effort-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ─── RISK REGISTER ─── */
+.risk-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 70px 1fr;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+  font-size: 12px;
+}
+.risk-row.header {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+}
+.risk-wrap {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
+}
+.risk-wrap .risk-row:last-child { border-bottom: none; }
+.severity {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-align: center;
+}
+.sev-high { background: var(--risk-bg); color: var(--risk); }
+.sev-med { background: var(--warn-bg); color: var(--warn); }
+.sev-low { background: var(--ok-bg); color: var(--ok); }
+
+/* ─── GO-LIVE CHECKLIST ─── */
+.go-live-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.go-live-col {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px;
+}
+.go-live-col h4 {
+  font-family: var(--heading);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.check-item {
+  display: flex;
+  gap: 7px;
+  font-size: 12px;
+  padding: 4px 0;
+  line-height: 1.4;
+  color: var(--ink);
+  border-bottom: 1px solid var(--paper2);
+}
+.check-item:last-child { border-bottom: none; }
+.check-box {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  background: var(--paper);
+}
+
+hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<!-- ─────────── MASTHEAD ─────────── -->
+<div class="masthead">
+  <div>
+    <div class="masthead-title">Implementation &amp;<br>Testing Plan</div>
+    <div class="masthead-sub">Youth Football Club · Dolibarr + InvoiceNinja Hybrid Stack · Latvia</div>
+  </div>
+  <div class="masthead-meta">
+    Version 1.0<br>
+    April 2026<br>
+    ~20 weeks total<br>
+    ~120h effort
+  </div>
+</div>
+
+<!-- ─────────── 01 TIMELINE GANTT ─────────── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <span class="section-title">High-level timeline</span>
+  </div>
+
+  <div class="gantt-wrap">
+    <div style="min-width:700px">
+      <div class="gantt-header">
+        <div></div>
+        <div class="gantt-wk month-start" style="grid-column:2/6">May</div>
+        <div class="gantt-wk month-start" style="grid-column:6/10">Jun</div>
+        <div class="gantt-wk month-start" style="grid-column:10/14">Jul</div>
+        <div class="gantt-wk month-start" style="grid-column:14/18">Aug</div>
+        <div class="gantt-wk month-start" style="grid-column:18/22">Sep</div>
+      </div>
+      <!-- week labels row -->
+      <div class="gantt-header" style="margin-bottom:10px">
+        <div></div>
+        <div class="gantt-wk">W1</div><div class="gantt-wk">W2</div><div class="gantt-wk">W3</div><div class="gantt-wk">W4</div>
+        <div class="gantt-wk">W1</div><div class="gantt-wk">W2</div><div class="gantt-wk">W3</div><div class="gantt-wk">W4</div>
+        <div class="gantt-wk">W1</div><div class="gantt-wk">W2</div><div class="gantt-wk">W3</div><div class="gantt-wk">W4</div>
+        <div class="gantt-wk">W1</div><div class="gantt-wk">W2</div><div class="gantt-wk">W3</div><div class="gantt-wk">W4</div>
+        <div class="gantt-wk">W1</div><div class="gantt-wk">W2</div><div class="gantt-wk">W3</div><div class="gantt-wk">W4</div>
+      </div>
+
+      <!-- Phase 1 -->
+      <div class="gantt-row">
+        <div class="gantt-label">Infrastructure setup</div>
+        <div class="gantt-cell" style="grid-column:2/6">
+          <div class="gantt-bar" style="background:var(--p1);color:white">Phase 1</div>
+        </div>
+        <div style="grid-column:6/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Dolibarr + IN + Caddy</div>
+        <div class="gantt-cell" style="grid-column:2/4">
+          <div class="gantt-bar" style="background:var(--p1l);color:var(--p1)"></div>
+        </div>
+        <div style="grid-column:4/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Stripe + member import</div>
+        <div class="gantt-cell" style="grid-column:3/6">
+          <div class="gantt-bar" style="background:var(--p1l);color:var(--p1)"></div>
+        </div>
+        <div style="grid-column:6/22"></div>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="gantt-row">
+        <div class="gantt-label">Billing engine</div>
+        <div style="grid-column:2/6"></div>
+        <div class="gantt-cell" style="grid-column:6/10">
+          <div class="gantt-bar" style="background:var(--p2);color:white">Phase 2</div>
+        </div>
+        <div style="grid-column:10/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Invoice templates + reminders</div>
+        <div style="grid-column:2/6"></div>
+        <div class="gantt-cell" style="grid-column:6/8">
+          <div class="gantt-bar" style="background:var(--p2l);color:var(--p2)"></div>
+        </div>
+        <div style="grid-column:8/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Pilot billing (5 members)</div>
+        <div style="grid-column:2/8"></div>
+        <div class="gantt-cell" style="grid-column:8/10">
+          <div class="gantt-bar" style="background:var(--p2l);color:var(--p2)"></div>
+        </div>
+        <div style="grid-column:10/22"></div>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="gantt-row">
+        <div class="gantt-label">n8n + WhatsApp automation</div>
+        <div style="grid-column:2/10"></div>
+        <div class="gantt-cell" style="grid-column:10/15">
+          <div class="gantt-bar" style="background:var(--p3);color:white">Phase 3</div>
+        </div>
+        <div style="grid-column:15/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Meta biz verification</div>
+        <div style="grid-column:2/10"></div>
+        <div class="gantt-cell" style="grid-column:10/12">
+          <div class="gantt-bar" style="background:var(--p3l);color:var(--p3)"></div>
+        </div>
+        <div style="grid-column:12/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Poll workflows + attendance</div>
+        <div style="grid-column:2/11"></div>
+        <div class="gantt-cell" style="grid-column:11/15">
+          <div class="gantt-bar" style="background:var(--p3l);color:var(--p3)"></div>
+        </div>
+        <div style="grid-column:15/22"></div>
+      </div>
+
+      <!-- Phase 4 -->
+      <div class="gantt-row">
+        <div class="gantt-label">Agreements + OCR</div>
+        <div style="grid-column:2/15"></div>
+        <div class="gantt-cell" style="grid-column:15/19">
+          <div class="gantt-bar" style="background:var(--p4);color:white">Phase 4</div>
+        </div>
+        <div style="grid-column:19/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">Docuseal templates</div>
+        <div style="grid-column:2/15"></div>
+        <div class="gantt-cell" style="grid-column:15/17">
+          <div class="gantt-bar" style="background:var(--p4l);color:var(--p4)"></div>
+        </div>
+        <div style="grid-column:17/22"></div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label" style="color:var(--muted);font-weight:400">DocTR OCR + n8n flow</div>
+        <div style="grid-column:2/16"></div>
+        <div class="gantt-cell" style="grid-column:16/19">
+          <div class="gantt-bar" style="background:var(--p4l);color:var(--p4)"></div>
+        </div>
+        <div style="grid-column:19/22"></div>
+      </div>
+
+      <!-- Phase 5 -->
+      <div class="gantt-row">
+        <div class="gantt-label">Full rollout</div>
+        <div style="grid-column:2/19"></div>
+        <div class="gantt-cell" style="grid-column:19/22">
+          <div class="gantt-bar" style="background:var(--p5);color:white">Phase 5</div>
+        </div>
+      </div>
+
+      <!-- Milestones -->
+      <div class="gantt-row" style="border-top:2px solid var(--border);margin-top:4px">
+        <div class="gantt-label" style="font-family:var(--mono);font-size:10px;color:var(--muted)">KEY MILESTONES</div>
+        <div style="grid-column:2/5"></div>
+        <div class="gantt-cell milestone-cell" style="grid-column:5/6"><div class="milestone-diamond" title="First invoice sent"></div></div>
+        <div style="grid-column:6/9"></div>
+        <div class="gantt-cell milestone-cell" style="grid-column:9/10"><div class="milestone-diamond" title="Pilot billing live"></div></div>
+        <div style="grid-column:10/14"></div>
+        <div class="gantt-cell milestone-cell" style="grid-column:14/15"><div class="milestone-diamond" title="First WhatsApp poll"></div></div>
+        <div style="grid-column:15/18"></div>
+        <div class="gantt-cell milestone-cell" style="grid-column:18/19"><div class="milestone-diamond" title="First e-signed agreement"></div></div>
+        <div style="grid-column:19/21"></div>
+        <div class="gantt-cell milestone-cell" style="grid-column:21/22"><div class="milestone-diamond" title="Full club live"></div></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:6px 0 0;display:flex;gap:18px">
+        <span>◆ First invoice sent (May W4)</span>
+        <span>◆ Pilot billing live (Jun W3)</span>
+        <span>◆ First WhatsApp poll (Jul W3)</span>
+        <span>◆ First e-agreement (Aug W3)</span>
+        <span>◆ Full club live (Sep W4)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 02 EFFORT SUMMARY ─────────── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <span class="section-title">Effort summary</span>
+  </div>
+
+  <div class="effort-grid">
+    <div class="effort-card">
+      <div class="effort-phase" style="color:var(--p1)">Phase 1</div>
+      <div class="effort-hours" style="color:var(--p1)">18h</div>
+      <div class="effort-label">Infrastructure &amp; data</div>
+    </div>
+    <div class="effort-card">
+      <div class="effort-phase" style="color:var(--p2)">Phase 2</div>
+      <div class="effort-hours" style="color:var(--p2)">20h</div>
+      <div class="effort-label">Billing engine</div>
+    </div>
+    <div class="effort-card">
+      <div class="effort-phase" style="color:var(--p3)">Phase 3</div>
+      <div class="effort-hours" style="color:var(--p3)">35h</div>
+      <div class="effort-label">WhatsApp + n8n <span style="font-size:10px;color:var(--muted)">(heaviest)</span></div>
+    </div>
+    <div class="effort-card">
+      <div class="effort-phase" style="color:var(--p4)">Phase 4</div>
+      <div class="effort-hours" style="color:var(--p4)">25h</div>
+      <div class="effort-label">Agreements + OCR</div>
+    </div>
+    <div class="effort-card">
+      <div class="effort-phase" style="color:var(--p5)">Phase 5</div>
+      <div class="effort-hours" style="color:var(--p5)">22h</div>
+      <div class="effort-label">Rollout + training</div>
+    </div>
+  </div>
+
+  <div class="callout info">All effort estimates assume <strong>part-time solo work (~6–8h/week)</strong>. Phases 1–2 can realistically be compressed into evenings across 2 weeks if motivated. Phase 3 (n8n + WhatsApp) is the longest because Meta business verification has an unpredictable lead time of 1–7 days, and the poll-parsing logic needs thorough edge-case testing. Total: <strong>~120 hours over ~20 weeks.</strong></div>
+</div>
+
+<!-- ─────────── PHASE 1 ─────────── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <span class="section-title">Phase-by-phase detail</span>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-pill" style="background:var(--p1);color:white">PHASE 1</div>
+      <div class="phase-title-group">
+        <div class="phase-title">Infrastructure &amp; data foundation</div>
+        <div class="phase-sub">Deploy core services · import members · connect Stripe</div>
+      </div>
+      <div class="phase-duration">Weeks 1–4 · 18h</div>
+    </div>
+    <div class="phase-body">
+      <div class="task-grid">
+        <div>
+          <div class="task-col-label">Build tasks</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Deploy Dolibarr + MariaDB via Docker Compose on skuby7 <span class="tool-tag">Dolibarr</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Deploy InvoiceNinja (Octane image) + MariaDB <span class="tool-tag">InvoiceNinja</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Configure Caddy reverse proxy — subdomains + TLS certs for both services</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Configure Tailscale access to admin panels (not public-facing)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Connect Stripe account to InvoiceNinja (API key, webhook endpoint) <span class="tool-tag">Stripe</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create Dolibarr modules: Members, Agenda, Resources, Documents</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Define team/squad structure in Dolibarr Groups (U8, U10, U12 etc.)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Import existing member roster from spreadsheet/CSV into Dolibarr</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Mirror member list as clients in InvoiceNinja (manual or CSV import)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Set up automated daily backup — Dolibarr volumes + both MySQL DBs → offsite storage</div></div>
+        </div>
+        <div>
+          <div class="task-col-label">Testing checklist</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Both admin UIs load over HTTPS with valid certs</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create a test member in Dolibarr — all fields save correctly</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create a test client in InvoiceNinja — client portal link works</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Stripe test mode: process a €1 card payment end-to-end, confirm it appears in InvoiceNinja as paid</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Stripe test SEPA debit: verify SEPA payment method appears in client portal (Latvia bank)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Backup restore test: restore both DBs from yesterday's backup to a temp container</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Dolibarr REST API: call <code style="font-family:var(--mono);font-size:10px">/api/index.php/members</code> — returns imported member list</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Dolibarr REST API: call <code style="font-family:var(--mono);font-size:10px">/api/index.php/agendaevents</code> — returns empty array (no events yet, but API is live)</div></div>
+        </div>
+      </div>
+      <div class="callout warn"><strong>SEPA verification is a gate.</strong> Before moving to Phase 2, confirm that a Latvian card and a Latvian SEPA bank account can actually process payments via your Stripe account. Stripe's Latvia support is solid but this must be verified empirically, not assumed.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-pill" style="background:var(--p2);color:white">PHASE 2</div>
+      <div class="phase-title-group">
+        <div class="phase-title">Billing engine</div>
+        <div class="phase-sub">Invoice templates · recurring setup · pilot with 5 real members</div>
+      </div>
+      <div class="phase-duration">Weeks 5–8 · 20h</div>
+    </div>
+    <div class="phase-body">
+      <div class="task-grid">
+        <div>
+          <div class="task-col-label">Build tasks</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Design InvoiceNinja invoice PDF template — club branding, bank details, payment link <span class="tool-tag">InvoiceNinja</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create email templates for: invoice sent, payment received, first/second/third reminder</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Configure overdue reminder schedule (e.g. day +7, +14, +30 with escalating tone)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Define standard monthly membership product (e.g. "Membership — Monthly €30")</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build pro-rata calculation logic: months remaining × monthly rate, applied to new-joiner subscription start date</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Set up recurring subscriptions for 5 pilot members — validate amounts, dates, payment links</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create coach clients as vendors in InvoiceNinja — set up expense category "Coach Session Fee"</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Send first real invoice to pilot group (manual trigger, not auto yet)</div></div>
+        </div>
+        <div>
+          <div class="task-col-label">Testing checklist</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Pilot member opens invoice email on mobile — payment link works, amounts correct</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Pilot member pays via card — invoice marked Paid within 60 seconds</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Pilot member pays partial amount — remaining balance shown correctly on invoice and in portal</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Manually trigger overdue reminder for a test invoice — correct email received, amount and link accurate</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Pro-rata test: create subscription starting Aug 1 — invoice shows 5 months × rate, not 12</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Treasurer dashboard: all 5 pilot members visible, payment status correct per member</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Collect feedback from 5 pilot members on payment experience (1 round of feedback)</div></div>
+        </div>
+      </div>
+      <div class="callout ok"><strong>Phase 2 is the MVP gate.</strong> If billing works for 5 members for one full payment cycle (4 weeks) without issues, you have a working payment system. Phases 3–5 add automation on top — they could be cut without losing core billing capability.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-pill" style="background:var(--p3);color:white">PHASE 3</div>
+      <div class="phase-title-group">
+        <div class="phase-title">Attendance automation — n8n + WhatsApp</div>
+        <div class="phase-sub">Meta verification · poll workflows · attendance storage · coach billing calc</div>
+      </div>
+      <div class="phase-duration">Weeks 9–14 · 35h</div>
+    </div>
+    <div class="phase-body">
+      <div class="task-grid">
+        <div>
+          <div class="task-col-label">Build tasks</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Apply for Meta Business verification (register club as a business entity) <span class="tool-tag">Meta</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Set up WhatsApp Business API — dedicated number, webhook URL pointing to n8n</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Deploy n8n on skuby7 (Docker), configure Dolibarr + InvoiceNinja credentials <span class="tool-tag">n8n</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build n8n workflow: daily cron → query Dolibarr calendar for today's events → filter by type</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build poll dispatch logic: compute send time per event type (training = morning-of, competition = configurable days prior)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build WhatsApp message template: event name, time, venue, ✅/❌/❓ options</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build response webhook handler: parse WA message → match sender phone → lookup Dolibarr member</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build attendance write-back: POST to Dolibarr event participants API with member ID + response</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build month-end coach billing flow: query attendance → count sessions by coach → create draft InvoiceNinja expense</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Add error alerting: n8n sends Slack/email on flow failures</div></div>
+        </div>
+        <div>
+          <div class="task-col-label">Testing checklist</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Create a test training event in Dolibarr — n8n detects it within the hour</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Poll message arrives in test WhatsApp group at correct time with correct event details</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Reply "1" (coming) from a test number — attendance record created in Dolibarr within 30 seconds</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Reply "2" (not coming) — attendance record updated, not duplicated</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Unknown number replies — workflow handles gracefully (logs warning, no crash)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Competition event: poll sent N days before (configurable), second poll 2 days before</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Month-end coach billing: create 10 test attendance records → billing workflow calculates correctly → draft expense in InvoiceNinja matches expected amount</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Simulate n8n crash: restart container → flows resume, no duplicate polls sent</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Run live with one squad for 2 full weeks before expanding to all squads</div></div>
+        </div>
+      </div>
+      <div class="callout risk"><strong>Highest-risk phase.</strong> Meta verification timing is unpredictable — build in a 2-week buffer. WhatsApp message template approval (required for outbound messages) takes 1–5 business days per template. Test the full poll → parse → write-back loop with real phones before going live with parents. Response parsing edge cases (free-text replies, reactions instead of numbered responses) need explicit handling.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-pill" style="background:var(--p4);color:white">PHASE 4</div>
+      <div class="phase-title-group">
+        <div class="phase-title">Agreement management</div>
+        <div class="phase-sub">Docuseal setup · ID OCR · registration form · e-signature flow</div>
+      </div>
+      <div class="phase-duration">Weeks 15–18 · 25h</div>
+    </div>
+    <div class="phase-body">
+      <div class="task-grid">
+        <div>
+          <div class="task-col-label">Build tasks</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Deploy Docuseal on skuby7 (Docker), configure email sender <span class="tool-tag">Docuseal</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Design club membership agreement template in Docuseal — variable fields: name, DOB, squad, year, club officer signature</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build HTML registration form: parent name, child data, ID photo upload field</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Deploy DocTR as Docker sidecar (CPU-only image, scale-to-zero) <span class="tool-tag">DocTR</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build n8n workflow: form submission → call DocTR OCR → extract name/DOB → compare to form data → flag mismatches</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build member creation: n8n → create Dolibarr member + InvoiceNinja client from OCR-validated data</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build agreement dispatch: n8n → call Docuseal API → generate pre-filled PDF → send to parent email for signing</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Build completion webhook: Docuseal → n8n → download signed PDF → attach to Dolibarr member → update member status → trigger InvoiceNinja subscription</div></div>
+        </div>
+        <div>
+          <div class="task-col-label">Testing checklist</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Submit test form with a photo of a real ID document — OCR extracts name and DOB correctly</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Submit with mismatched name — mismatch flag raised, admin notified, flow pauses for review</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Docuseal email received — agreement pre-filled with correct member data</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Sign agreement on mobile (iOS + Android, two testers) — signing UX is acceptable</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Post-signature: signed PDF attached to member record in Dolibarr within 2 minutes</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Post-signature: InvoiceNinja recurring subscription created automatically for new member</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Run full new-member flow end-to-end with 3 real test registrations</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">DocTR accuracy test: process 10 sample Latvian ID photos — measure field extraction accuracy</div></div>
+        </div>
+      </div>
+      <div class="callout warn"><strong>OCR accuracy varies by ID type and photo quality.</strong> Latvian passports and eID cards have different layouts. Test with both. Build the mismatch flag conservatively — when in doubt, require human review rather than auto-proceeding. The OCR is a convenience prefill, not a trust anchor; the human reviewing the submission is the actual validator.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-pill" style="background:var(--p5);color:white">PHASE 5</div>
+      <div class="phase-title-group">
+        <div class="phase-title">Full rollout &amp; handover</div>
+        <div class="phase-sub">All members migrated · treasurer training · runbooks written · monitoring live</div>
+      </div>
+      <div class="phase-duration">Weeks 19–20 · 22h</div>
+    </div>
+    <div class="phase-body">
+      <div class="task-grid">
+        <div>
+          <div class="task-col-label">Build tasks</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Migrate all remaining members from pilot to full Dolibarr + InvoiceNinja setup</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Activate WhatsApp polling for all squads</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Configure Grafana Alloy dashboards for all four services (already running on linardshomelab) <span class="tool-tag">Grafana</span></div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Write treasurer runbook: how to add/remove members, record manual payments, export reports</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Write ops runbook: how to upgrade each service, restore from backup, restart failed containers</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Conduct 1-hour walkthrough session with club treasurer / admin</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Set up uptime alerting (UptimeRobot free tier) for all four service endpoints</div></div>
+        </div>
+        <div>
+          <div class="task-col-label">Acceptance criteria (go-live gates)</div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">All active members have a Dolibarr record, InvoiceNinja client, and active subscription</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">One full monthly billing cycle completed for all members without manual intervention</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">WhatsApp polls running for all squads for ≥2 weeks with ≥70% response rate</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">At least one new member registered via full automated flow (form → OCR → agreement → billing)</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Treasurer can independently: add a member, check payment status, send a manual reminder — without asking for help</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">Ops runbook tested: another person follows it to restart a container from scratch</div></div>
+          <div class="task-item"><div class="task-check"></div><div class="task-text">30 days of uptime data — all services ≥99% uptime</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── RISK REGISTER ─────────── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">04</span>
+    <span class="section-title">Risk register</span>
+  </div>
+
+  <div class="risk-wrap">
+    <div class="risk-row header">
+      <span>Risk</span>
+      <span>Severity</span>
+      <span>Phase</span>
+      <span>Mitigation</span>
+    </div>
+    <div class="risk-row">
+      <span>Meta business verification rejected or delayed beyond 2 weeks</span>
+      <span><div class="severity sev-high">HIGH</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 3</span>
+      <span>Start verification in parallel with Phase 2. Have a fallback: send attendance polls via email or Telegram until WhatsApp is live. Don't block Phase 2 billing on it.</span>
+    </div>
+    <div class="risk-row">
+      <span>Stripe Latvia SEPA payments don't work as expected</span>
+      <span><div class="severity sev-high">HIGH</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 1</span>
+      <span>Test with a real Latvian bank account in Phase 1 (test mode, then live with €1). If SEPA fails, fall back to card-only — most parents have a Visa/Mastercard. SEPA becomes optional.</span>
+    </div>
+    <div class="risk-row">
+      <span>WhatsApp response parsing breaks on free-text replies / emojis</span>
+      <span><div class="severity sev-med">MED</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 3</span>
+      <span>Use numbered quick-reply buttons (WA interactive messages) instead of free-text parsing. Buttons are more reliable and require no NLP. Parse fallback: any unrecognised message is logged as "no response" and alerts admin.</span>
+    </div>
+    <div class="risk-row">
+      <span>DocTR OCR accuracy poor on Latvian ID cards</span>
+      <span><div class="severity sev-med">MED</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 4</span>
+      <span>OCR prefill is a convenience, not a gate. All fields are editable before submission. Low accuracy = more manual review, not a system failure. If DocTR is consistently poor, swap to Eden AI API (paid, ~$0.01/doc) without changing the n8n workflow.</span>
+    </div>
+    <div class="risk-row">
+      <span>n8n workflow failure causes missed polls / unrecorded attendance</span>
+      <span><div class="severity sev-med">MED</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 3–5</span>
+      <span>n8n has built-in error logging and retry logic. Add a Slack/email alert on any flow failure. For missed polls: coaches mark attendance manually in Dolibarr as fallback. Attendance is never fully automated — manual override always works.</span>
+    </div>
+    <div class="risk-row">
+      <span>Club treasurer can't operate system after handover</span>
+      <span><div class="severity sev-med">MED</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 5</span>
+      <span>InvoiceNinja and Dolibarr are both operable without technical knowledge for day-to-day tasks. The n8n automation runs silently. Treasurer only needs to: check payment dashboard, add/remove members, send manual reminders. Write a 1-page cheat sheet for these 3 tasks.</span>
+    </div>
+    <div class="risk-row">
+      <span>skuby7 VPS runs out of RAM with all services running</span>
+      <span><div class="severity sev-low">LOW</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 1</span>
+      <span>Stack requires ~2 GB peak RAM. Check current skuby7 spec — if under 4 GB, upgrade to Hetzner CX32 (~€8.50/mo). DocTR runs on-demand only so peak usage is brief.</span>
+    </div>
+    <div class="risk-row">
+      <span>LFF / COMET requires digital registration that conflicts with manual export</span>
+      <span><div class="severity sev-low">LOW</div></span>
+      <span style="font-family:var(--mono);font-size:11px">Ph 4</span>
+      <span>Dolibarr has CSV/Excel export for member data. Map fields to LFF format once and document it. If LFF publishes an API later, n8n can handle the push. Not a blocker for any phase.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── GO-LIVE CHECKLIST ─────────── -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">05</span>
+    <span class="section-title">Go-live checklist</span>
+  </div>
+
+  <div class="go-live-grid">
+    <div class="go-live-col">
+      <h4>Infrastructure</h4>
+      <div class="check-item"><div class="check-box"></div><span>All 4 services running, HTTPS, valid certs</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Daily automated backup verified (test restore done)</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Uptime monitoring configured for all endpoints</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Grafana dashboards live (Alloy → Grafana Cloud)</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Tailscale SSH confirmed for emergency access</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Stripe live mode activated (not test mode)</span></div>
+      <div class="check-item"><div class="check-box"></div><span>All env secrets in .env, not hardcoded</span></div>
+    </div>
+    <div class="go-live-col">
+      <h4>Billing &amp; members</h4>
+      <div class="check-item"><div class="check-box"></div><span>100% of active members in Dolibarr</span></div>
+      <div class="check-item"><div class="check-box"></div><span>100% of active members have IN subscription</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Reminder schedule configured + tested</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Invoice template reviewed by treasurer</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Coach clients + expense categories set up</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Stripe payout destination verified (club bank account)</span></div>
+      <div class="check-item"><div class="check-box"></div><span>First billing cycle completed successfully</span></div>
+    </div>
+    <div class="go-live-col">
+      <h4>Automation &amp; handover</h4>
+      <div class="check-item"><div class="check-box"></div><span>WA polls running for ≥2 weeks across all squads</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Registration form + agreement flow tested end-to-end</span></div>
+      <div class="check-item"><div class="check-box"></div><span>n8n flow error alerts confirmed working</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Treasurer runbook written + walkthrough done</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Ops runbook written + tested by a second person</span></div>
+      <div class="check-item"><div class="check-box"></div><span>Emergency contact list: who to call if something breaks</span></div>
+      <div class="check-item"><div class="check-box"></div><span>n8n flows exported and backed up as JSON</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
