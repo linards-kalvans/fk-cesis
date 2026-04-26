@@ -1,0 +1,122 @@
+---
+services:
+  dolibarr:
+    image: dolibarr/dolibarr:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      DOLI_DB_HOST: dolibarr-db
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER: dolibarr
+      DOLI_DB_PASSWORD: ${DOLI_DB_PASSWORD}
+      DOLI_ADMIN_LOGIN: admin
+      DOLI_ADMIN_PASSWORD: ${DOLI_ADMIN_PASSWORD}
+      DOLI_URL_ROOT: https://club.${DOMAIN}
+      DOLI_AUTH: dolibarr
+    volumes:
+      - dolibarr_data:/var/www/html/documents
+    depends_on:
+      - dolibarr-db
+
+  dolibarr-db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: dolibarr
+      MYSQL_USER: dolibarr
+      MYSQL_PASSWORD: ${DOLI_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DOLI_DB_ROOT_PASSWORD}
+    volumes:
+      - dolibarr_db_data:/var/lib/mysql
+
+  invoiceninja:
+    image: invoiceninja/invoiceninja-octane:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:80"
+    environment:
+      APP_URL: https://billing.${DOMAIN}
+      APP_KEY: ${NINJA_APP_KEY}
+      DB_HOST: ninja-db
+      DB_DATABASE: ninja
+      DB_USERNAME: ninja
+      DB_PASSWORD: ${NINJA_DB_PASSWORD}
+      NINJA_LICENSE: self-hosted-open-source
+    volumes:
+      - ninja_storage:/var/app/storage
+      - ninja_public:/var/app/public
+    depends_on:
+      - ninja-db
+
+  ninja-db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ninja
+      MYSQL_USER: ninja
+      MYSQL_PASSWORD: ${NINJA_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${NINJA_DB_ROOT_PASSWORD}
+    volumes:
+      - ninja_db_data:/var/lib/mysql
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: n8n.${DOMAIN}
+      N8N_PORT: 5678
+      WEBHOOK_URL: https://n8n.${DOMAIN}/
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - n8n-db
+
+  n8n-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8n_db_data:/var/lib/postgresql/data
+
+  docuseal:
+    image: docuseal/docuseal:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      SECRET_KEY_BASE: ${DOCUSEAL_SECRET_KEY}
+      DATABASE_URL: sqlite3:///data/docuseal.sqlite3
+    volumes:
+      - docuseal_data:/data
+
+  doctr-api:
+    image: ghcr.io/mindee/doctr:api-cpu-latest
+    restart: "no"
+    profiles:
+      - ocr
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+volumes:
+  dolibarr_data:
+  dolibarr_db_data:
+  ninja_storage:
+  ninja_public:
+  ninja_db_data:
+  n8n_data:
+  n8n_db_data:
+  docuseal_data:
