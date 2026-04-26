@@ -16,7 +16,7 @@
 - name: Check current Caddyfile
   ansible.builtin.stat:
     path: "{{ football_club_caddyfile_path }}"
-  register: caddyfile_stat
+  register: caddy_caddyfile_stat
 
 - name: Back up existing Caddyfile before first Ansible takeover
   ansible.builtin.copy:
@@ -27,7 +27,7 @@
     mode: "0640"
     remote_src: true
     force: false
-  when: caddyfile_stat.stat.exists
+  when: caddy_caddyfile_stat.stat.exists
 
 - name: Render managed Caddyfile
   ansible.builtin.template:

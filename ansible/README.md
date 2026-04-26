@@ -34,7 +34,7 @@ ansible-galaxy collection install -r ansible/requirements.yml
 Run every time Ansible changes:
 
 ```bash
-ansible-lint
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-lint ansible/playbooks/site.yml ansible/playbooks/validate.yml
 yamllint .
 ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --syntax-check ansible/playbooks/site.yml
 ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --syntax-check ansible/playbooks/validate.yml
