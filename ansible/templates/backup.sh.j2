@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="{{ football_club_backup_dir }}/${DATE}"
+PROJECT_DIR="{{ football_club_project_dir }}"
+COMPOSE="docker compose -p {{ football_club_compose_project_name }} -f ${PROJECT_DIR}/docker-compose.yml --env-file ${PROJECT_DIR}/.env"
+
+mkdir -p "${BACKUP_DIR}"
+
+cd "${PROJECT_DIR}"
+
+${COMPOSE} exec -T dolibarr-db sh -c 'mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" dolibarr' > "${BACKUP_DIR}/dolibarr.sql"
+${COMPOSE} exec -T ninja-db sh -c 'mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" ninja' > "${BACKUP_DIR}/ninja.sql"
+${COMPOSE} exec -T n8n-db sh -c 'PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump -U n8n n8n' > "${BACKUP_DIR}/n8n.sql"
+
+docker run --rm -v {{ football_club_compose_project_name }}_dolibarr_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/dolibarr_documents.tar.gz -C /data .
+
+docker run --rm -v {{ football_club_compose_project_name }}_n8n_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/n8n_workflows.tar.gz -C /data .
+
+rsync -az "${BACKUP_DIR}" "{{ football_club_backup_remote }}"
+
+find "{{ football_club_backup_dir }}" -maxdepth 1 -mtime +30 -type d -exec rm -rf {} +
+
+echo "Backup complete: ${BACKUP_DIR}"
