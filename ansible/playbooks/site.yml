@@ -8,3 +8,4 @@
     - role: common
     - role: docker
     - role: football_club_stack
+    - role: caddy

@@ -1,0 +1,19 @@
+{
+  email {{ football_club_admin_email }}
+}
+
+club.{{ football_club_domain }} {
+  reverse_proxy 127.0.0.1:8081
+}
+
+billing.{{ football_club_domain }} {
+  reverse_proxy 127.0.0.1:8082
+}
+
+n8n.{{ football_club_domain }} {
+  reverse_proxy 127.0.0.1:5678
+}
+
+agreements.{{ football_club_domain }} {
+  reverse_proxy 127.0.0.1:3000
+}
