@@ -32,9 +32,34 @@ Self-hosted hybrid stack for a youth football club based in Latvia (EU/SEPA zone
 ### Goal
 All four core services deployed, accessible, and verified working. Existing member roster imported. Stripe connection confirmed working for Latvia.
 
-### Docker Compose
+### Ansible deployment foundation
 
-Create `/opt/football-club/docker-compose.yml`:
+Phase 1 deployment is managed with Ansible. Docker Compose remains the runtime orchestrator, but host configuration must be rendered and applied from source-controlled Ansible roles instead of manual edits.
+
+The deployment foundation targets an Ubuntu LTS VM first, then a production Ubuntu LTS host later. Ansible owns these host artifacts:
+
+- `/opt/football-club/docker-compose.yml`
+- `/opt/football-club/.env`
+- `/etc/caddy/Caddyfile`
+- `/opt/football-club/backup.sh`
+- backup cron schedule
+
+Secrets must come from Ansible Vault. Real `.env` files, vault passwords, API keys, Stripe secrets, WhatsApp tokens, database passwords, and real ID photos must never be committed.
+
+Mandatory checks for Ansible changes:
+
+```bash
+ansible-lint
+yamllint .
+ansible-playbook --syntax-check ansible/playbooks/site.yml
+ansible-playbook --check --diff ansible/playbooks/site.yml
+```
+
+After dry-run, apply the playbook to the Ubuntu LTS VM and run HTTP smoke checks against the real subdomains pointed to that VM.
+
+### Docker Compose template
+
+Ansible renders `/opt/football-club/docker-compose.yml` from the repository template:
 
 ```yaml
 services:
@@ -156,11 +181,13 @@ volumes:
   docuseal_data:
 ```
 
-Create `/opt/football-club/.env` with all `${VAR}` values. Never commit this file.
+Ansible renders `/opt/football-club/.env` from encrypted Ansible Vault variables. Never commit generated `.env` files or plaintext secrets.
 
 ### Caddy configuration
 
-Add to existing Caddyfile:
+Ansible installs and manages Caddy. If the target host already has a Caddyfile, back it up before replacing it with the managed configuration.
+
+Managed Caddyfile:
 
 ```
 club.{$DOMAIN} {
@@ -202,7 +229,7 @@ Mirror the same list into InvoiceNinja as clients: **Clients → Import → CSV*
 
 ### Backup script
 
-Create `/opt/football-club/backup.sh`:
+Ansible installs `/opt/football-club/backup.sh`:
 
 ```bash
 #!/bin/bash
@@ -233,11 +260,19 @@ find /opt/backups/football-club -maxdepth 1 -mtime +30 -type d -exec rm -rf {} +
 echo "Backup complete: $BACKUP_DIR"
 ```
 
-Add to crontab: `0 2 * * * /opt/football-club/backup.sh >> /var/log/football-backup.log 2>&1`
+Ansible schedules the backup cron entry: `0 2 * * * /opt/football-club/backup.sh >> /var/log/football-backup.log 2>&1`
 
 ### Phase 1 acceptance tests
 
 ```
+[ ] ansible-lint passes
+[ ] yamllint . passes
+[ ] ansible-playbook --syntax-check ansible/playbooks/site.yml passes
+[ ] ansible-playbook --check --diff ansible/playbooks/site.yml passes
+[ ] Full Ansible apply to Ubuntu LTS VM succeeds
+[ ] docker compose -f /opt/football-club/docker-compose.yml config succeeds on the VM
+[ ] Caddy validates and reloads successfully
+[ ] Expected containers are running or healthy where health checks exist
 [ ] GET https://club.{DOMAIN}/api/index.php/members — returns 200 with member list
 [ ] GET https://billing.{DOMAIN} — InvoiceNinja admin UI loads
 [ ] GET https://n8n.{DOMAIN} — n8n UI loads

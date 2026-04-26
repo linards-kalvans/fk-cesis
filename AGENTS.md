@@ -1,6 +1,6 @@
 # Project Overview
 
-Self-hosted hybrid platform plan for a Latvian youth football club. Current repo is documentation-only; no application code, manifests, CI, or executable test tooling exists yet.
+Self-hosted hybrid platform plan for football club FK CĒSIS. Current repo is documentation-only; no application code, manifests, CI, or executable test tooling exists yet.
 
 ## Scope
 
@@ -20,13 +20,15 @@ Self-hosted hybrid platform plan for a Latvian youth football club. Current repo
 
 ## Specs
 
-- No separate spec directory exists yet.
-- Treat `docs/implementation-plan.md` as current source of truth for architecture, risks, env vars, and acceptance gates.
-- `docs/html/implementation-plan.html` is a rendered companion; update Markdown first if content changes.
+- Approved design specs live under `docs/superpowers/specs/`.
+- Current deployment foundation spec: `docs/superpowers/specs/2026-04-26-ansible-deployment-foundation-design.md`.
+- Treat `docs/implementation-plan.md` as current source of truth for architecture, risks, env vars, and acceptance gates until a more specific approved spec or plan applies.
+- `docs/html/implementation-plan.html` is a rendered companion and may be stale; update Markdown first if content changes, and only regenerate HTML when explicitly in scope.
 
 ## Plans
 
 - Primary plan: `docs/implementation-plan.md`.
+- Deployment foundation planning must follow `docs/superpowers/specs/2026-04-26-ansible-deployment-foundation-design.md` until a detailed implementation plan supersedes it.
 - Do not add implementation details that conflict with this plan unless the plan is updated in the same change.
 - Phase gates in the plan are hard stops; especially verify real Stripe Latvia SEPA/card support before moving past Phase 1.
 
@@ -40,12 +42,17 @@ Self-hosted hybrid platform plan for a Latvian youth football club. Current repo
 - Stripe: external payment gateway for card and SEPA in Latvia.
 - Caddy: existing reverse proxy and TLS termination.
 - Grafana Alloy and UptimeRobot are planned monitoring pieces in Phase 5.
+- Ansible is the deployment automation tool for the Phase 1 foundation.
+- Docker Compose remains the runtime orchestrator.
+- Ansible Vault is required for committed encrypted secrets.
 
 ## Workflow Rules
 
 - This repo was initialized as a git repo during AGENTS setup; preserve git history from here onward.
 - Never commit `/opt/football-club/.env`, API keys, tokens, Stripe secrets, WhatsApp tokens, database passwords, or real ID document photos.
 - Until executable tests exist, use the phase acceptance tests in `docs/implementation-plan.md` as verification checklists.
+- For Ansible changes, `ansible-lint`, `yamllint`, and `ansible-playbook --syntax-check` are mandatory.
+- For deployment changes, also run `ansible-playbook --check --diff` and apply to the Ubuntu LTS VM before claiming completion.
 - If adding code later, add exact setup/test/lint commands to this file once verified from manifests or CI.
 - Prefer executable sources of truth over prose when they appear; currently no executable sources exist.
 
