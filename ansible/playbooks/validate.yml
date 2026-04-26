@@ -1,0 +1,62 @@
+---
+- name: Validate FK CĒSIS football club platform deployment
+  hosts: football_club
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Validate Docker Compose config
+      ansible.builtin.command:
+        cmd: docker compose -f {{ football_club_project_dir }}/docker-compose.yml --env-file {{ football_club_project_dir }}/.env config
+      register: validate_compose_config
+      changed_when: false
+      no_log: true
+
+    - name: List Compose services
+      ansible.builtin.command:
+        cmd: docker compose -p {{ football_club_compose_project_name }} -f {{ football_club_project_dir }}/docker-compose.yml --env-file {{ football_club_project_dir }}/.env ps --format json
+      register: compose_ps
+      changed_when: false
+      no_log: true
+
+    - name: Validate Caddy config
+      ansible.builtin.command:
+        cmd: caddy validate --config {{ football_club_caddyfile_path }} --adapter caddyfile
+      register: validate_caddy
+      changed_when: false
+
+    - name: Check Dolibarr HTTP endpoint
+      ansible.builtin.uri:
+        url: "https://club.{{ football_club_domain }}/"
+        method: GET
+        status_code:
+          - 200
+          - 302
+        return_content: false
+
+    - name: Check InvoiceNinja HTTP endpoint
+      ansible.builtin.uri:
+        url: "https://billing.{{ football_club_domain }}/"
+        method: GET
+        status_code:
+          - 200
+          - 302
+        return_content: false
+
+    - name: Check n8n HTTP endpoint
+      ansible.builtin.uri:
+        url: "https://n8n.{{ football_club_domain }}/"
+        method: GET
+        status_code:
+          - 200
+          - 302
+        return_content: false
+
+    - name: Check Docuseal HTTP endpoint
+      ansible.builtin.uri:
+        url: "https://agreements.{{ football_club_domain }}/"
+        method: GET
+        status_code:
+          - 200
+          - 302
+        return_content: false
