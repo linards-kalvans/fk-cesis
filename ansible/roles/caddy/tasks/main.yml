@@ -40,7 +40,7 @@
 
 - name: Validate Caddy config
   ansible.builtin.command:
-    cmd: caddy validate --config {{ football_club_caddyfile_path }}
+    cmd: caddy validate --config {{ football_club_caddyfile_path }} --adapter caddyfile
   register: caddy_validate_result
   changed_when: false
 
