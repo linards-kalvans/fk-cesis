@@ -52,6 +52,7 @@ Self-hosted hybrid platform plan for football club FK CĒSIS. Current repo is do
 - Never commit `/opt/football-club/.env`, API keys, tokens, Stripe secrets, WhatsApp tokens, database passwords, or real ID document photos.
 - Until executable tests exist, use the phase acceptance tests in `docs/implementation-plan.md` as verification checklists.
 - For Ansible changes, `ansible-lint`, `yamllint`, and `ansible-playbook --syntax-check` are mandatory.
+- Ansible playbooks must avoid global/play-level `become`; use task-level `become: true` only for operations that require root.
 - For deployment changes, also run `ansible-playbook --check --diff` and apply to the Ubuntu LTS VM before claiming completion.
 - If adding code later, add exact setup/test/lint commands to this file once verified from manifests or CI.
 - Prefer executable sources of truth over prose when they appear; currently no executable sources exist.

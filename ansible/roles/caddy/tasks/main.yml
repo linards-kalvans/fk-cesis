@@ -5,6 +5,7 @@
       - caddy
     state: present
     update_cache: true
+  become: true
 
 - name: Ensure Caddy backup directory exists
   ansible.builtin.file:
@@ -13,6 +14,7 @@
     owner: root
     group: root
     mode: "0750"
+  become: true
 
 - name: Check current Caddyfile
   ansible.builtin.stat:
@@ -29,6 +31,7 @@
     remote_src: true
     force: false
   when: caddy_caddyfile_stat.stat.exists
+  become: true
 
 - name: Render managed Caddyfile
   ansible.builtin.template:
@@ -37,6 +40,7 @@
     owner: root
     group: root
     mode: "0644"
+  become: true
   notify: Reload Caddy
 
 - name: Validate Caddy config
@@ -50,3 +54,4 @@
     name: caddy
     enabled: true
     state: started
+  become: true

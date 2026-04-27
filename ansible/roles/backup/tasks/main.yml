@@ -6,6 +6,7 @@
     owner: root
     group: root
     mode: "0750"
+  become: true
 
 - name: Schedule daily football club backup
   ansible.builtin.cron:
@@ -14,3 +15,4 @@
     minute: "0"
     hour: "2"
     job: "{{ football_club_project_dir }}/backup.sh >> /var/log/football-backup.log 2>&1"
+  become: true

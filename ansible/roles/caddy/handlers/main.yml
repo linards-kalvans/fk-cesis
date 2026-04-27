@@ -3,3 +3,4 @@
   ansible.builtin.service:
     name: caddy
     state: reloaded
+  become: true

@@ -12,3 +12,16 @@
     name: docker
     enabled: true
     state: started
+  become: true
+
+- name: Allow deployment user to run Docker without sudo
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true
+  become: true
+  register: docker_deploy_user_group
+
+- name: Reset SSH connection so docker group membership is active  # noqa: no-handler
+  ansible.builtin.meta: reset_connection
+  when: docker_deploy_user_group.changed

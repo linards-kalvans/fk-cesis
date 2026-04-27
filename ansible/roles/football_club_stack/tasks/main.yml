@@ -6,14 +6,16 @@
     owner: root
     group: root
     mode: "0644"
+  become: true
 
 - name: Render environment file from Ansible Vault values
   ansible.builtin.template:
     src: env.j2
     dest: "{{ football_club_project_dir }}/.env"
-    owner: root
-    group: root
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: "0600"
+  become: true
   no_log: true
 
 - name: Validate rendered Docker Compose config

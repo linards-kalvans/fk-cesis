@@ -1,7 +1,6 @@
 ---
 - name: Validate FK CĒSIS football club platform deployment
   hosts: football_club
-  become: true
   gather_facts: false
 
   tasks:

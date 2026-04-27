@@ -1274,6 +1274,139 @@ class TestDocusealDatabaseContract(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# 5i. Least-privilege become contract tests
+# ---------------------------------------------------------------------------
+# Ansible privilege escalation is being moved from global/play-level to
+# task-level.  The deployment user joins the docker group so Docker/Compose
+# commands run unprivileged.  Host mutations still need task-level become: true.
+
+
+class TestAnsibleLeastPrivilegeBecome(unittest.TestCase):
+    """Contract tests for least-privilege Ansible sudo usage.
+
+    The deployment user is allowed in the docker group, so Docker and Compose
+    commands should run without Ansible sudo. Host-level mutations still need
+    task-level become.
+    """
+
+    def test_ansible_cfg_disables_global_become(self):
+        content = _read("ansible/ansible.cfg")
+        self.assertIn(
+            "become = False",
+            content,
+            "ansible.cfg must default to no privilege escalation",
+        )
+        self.assertNotIn(
+            "become = True",
+            content,
+            "ansible.cfg must not enable global privilege escalation",
+        )
+
+    def test_site_playbook_has_no_play_level_become(self):
+        content = _read("ansible/playbooks/site.yml")
+        self.assertNotRegex(
+            content,
+            r"(?m)^\s{2}become:\s*true\s*$",
+            "site.yml must not enable become at play level",
+        )
+
+    def test_validate_playbook_has_no_play_level_become(self):
+        content = _read("ansible/playbooks/validate.yml")
+        self.assertNotRegex(
+            content,
+            r"(?m)^\s{2}become:\s*true\s*$",
+            "validate.yml must not enable become at play level",
+        )
+
+    def test_docker_role_adds_deploy_user_to_docker_group(self):
+        content = _read("ansible/roles/docker/tasks/main.yml")
+        self.assertIn("ansible.builtin.user:", content)
+        self.assertIn('name: "{{ ansible_user }}"', content)
+        self.assertIn("groups: docker", content)
+        self.assertIn("append: true", content)
+
+    def test_docker_role_resets_connection_after_group_change(self):
+        content = _read("ansible/roles/docker/tasks/main.yml")
+        self.assertIn("ansible.builtin.meta: reset_connection", content)
+
+    def test_docker_compose_commands_do_not_use_task_level_become(self):
+        content = _read("ansible/roles/football_club_stack/tasks/main.yml")
+        for task_name in (
+            "Validate rendered Docker Compose config",
+            "Prepare InvoiceNinja Docker volumes",
+            "Initialize InvoiceNinja storage volume for ninja user",
+            "Start football club stack",
+        ):
+            with self.subTest(task=task_name):
+                pattern = re.compile(
+                    rf"- name: {re.escape(task_name)}(?P<body>.*?)(?=\n- name: |\Z)",
+                    re.DOTALL,
+                )
+                match = pattern.search(content)
+                self.assertIsNotNone(match, f"Missing task: {task_name}")
+                self.assertNotIn(
+                    "become: true",
+                    match.group("body"),
+                    f"{task_name} must run as the deployment user via docker group",
+                )
+
+    def test_validate_playbook_http_checks_do_not_use_become(self):
+        content = _read("ansible/playbooks/validate.yml")
+        for task_name in (
+            "Check Dolibarr HTTP endpoint",
+            "Check InvoiceNinja HTTP endpoint",
+            "Check n8n HTTP endpoint",
+            "Check Docuseal HTTP endpoint",
+        ):
+            with self.subTest(task=task_name):
+                pattern = re.compile(
+                    rf"- name: {re.escape(task_name)}(?P<body>.*?)(?=\n    - name: |\Z)",
+                    re.DOTALL,
+                )
+                match = pattern.search(content)
+                self.assertIsNotNone(match, f"Missing task: {task_name}")
+                self.assertNotIn("become: true", match.group("body"))
+
+    def test_root_mutation_task_files_use_task_level_become(self):
+        required_files = [
+            "ansible/roles/common/tasks/main.yml",
+            "ansible/roles/docker/tasks/main.yml",
+            "ansible/roles/football_club_stack/tasks/main.yml",
+            "ansible/roles/caddy/tasks/main.yml",
+            "ansible/roles/backup/tasks/main.yml",
+            "ansible/roles/caddy/handlers/main.yml",
+        ]
+        for path in required_files:
+            with self.subTest(path=path):
+                content = _read(path)
+                self.assertIn(
+                    "become: true",
+                    content,
+                    f"{path} must declare task-level become for root-required operations",
+                )
+
+    def test_env_rendered_for_deploy_user_not_root(self):
+        content = _read("ansible/roles/football_club_stack/tasks/main.yml")
+        env_task_pattern = re.compile(
+            r"- name: Render environment file from Ansible Vault values"
+            r"(?P<body>.*?)(?=\n- name: |\Z)",
+            re.DOTALL,
+        )
+        match = env_task_pattern.search(content)
+        self.assertIsNotNone(match, "Missing .env render task")
+        self.assertIn(
+            'owner: "{{ ansible_user }}"',
+            match.group("body"),
+            ".env must be owned by ansible_user so unprivileged docker compose can read it",
+        )
+        self.assertIn(
+            'group: "{{ ansible_user }}"',
+            match.group("body"),
+            ".env group must be ansible_user",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Suite runner
 # ---------------------------------------------------------------------------
 
