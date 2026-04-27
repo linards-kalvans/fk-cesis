@@ -1,5 +1,5 @@
 ---
-football_club_domain: "mplytics.eu"
+football_club_domain: "skuby7.tail45ce0a.ts.net"
 football_club_admin_email: "admin@mplytics.eu"
 football_club_project_dir: "/opt/fk-cesis"
 football_club_backup_dir: "/opt/backups/fk-cesis"
@@ -9,3 +9,6 @@ football_club_caddyfile_path: "/etc/caddy/Caddyfile"
 football_club_caddy_backup_dir: "/etc/caddy/backups"
 football_club_compose_project_name: "fk-cesis"
 football_club_doctr_enabled: false
+football_club_caddy_mode: "path"
+football_club_caddy_http_port: 80
+football_club_caddy_https_port: 443
