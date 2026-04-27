@@ -29,9 +29,28 @@
       register: validate_caddy
       changed_when: false
 
+    - name: Set service endpoint URLs
+      ansible.builtin.set_fact:
+        dolibarr_endpoint: >-
+          {{ 'https://' ~ football_club_domain ~ '/club/'
+             if football_club_caddy_mode == 'path'
+             else 'https://club.' ~ football_club_domain ~ '/' }}
+        billing_endpoint: >-
+          {{ 'https://' ~ football_club_domain ~ '/billing/'
+             if football_club_caddy_mode == 'path'
+             else 'https://billing.' ~ football_club_domain ~ '/' }}
+        n8n_endpoint: >-
+          {{ 'https://' ~ football_club_domain ~ '/n8n/'
+             if football_club_caddy_mode == 'path'
+             else 'https://n8n.' ~ football_club_domain ~ '/' }}
+        agreements_endpoint: >-
+          {{ 'https://' ~ football_club_domain ~ '/agreements/'
+             if football_club_caddy_mode == 'path'
+             else 'https://agreements.' ~ football_club_domain ~ '/' }}
+
     - name: Check Dolibarr HTTP endpoint
       ansible.builtin.uri:
-        url: "https://club.{{ football_club_domain }}/"
+        url: "{{ dolibarr_endpoint }}"
         method: GET
         status_code:
           - 200
@@ -40,7 +59,7 @@
 
     - name: Check InvoiceNinja HTTP endpoint
       ansible.builtin.uri:
-        url: "https://billing.{{ football_club_domain }}/"
+        url: "{{ billing_endpoint }}"
         method: GET
         status_code:
           - 200
@@ -49,7 +68,7 @@
 
     - name: Check n8n HTTP endpoint
       ansible.builtin.uri:
-        url: "https://n8n.{{ football_club_domain }}/"
+        url: "{{ n8n_endpoint }}"
         method: GET
         status_code:
           - 200
@@ -58,7 +77,7 @@
 
     - name: Check Docuseal HTTP endpoint
       ansible.builtin.uri:
-        url: "https://agreements.{{ football_club_domain }}/"
+        url: "{{ agreements_endpoint }}"
         method: GET
         status_code:
           - 200
