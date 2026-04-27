@@ -57,11 +57,11 @@ ansible/requirements.yml
 ansible/README.md
 ansible/inventories/local_vm/hosts.yml
 ansible/inventories/production/hosts.yml
-ansible/group_vars/local_vm/vars.yml
-ansible/group_vars/local_vm/vault.example.yml
-ansible/group_vars/local_vm/vault.yml
-ansible/group_vars/production/vars.yml
-ansible/group_vars/production/vault.example.yml
+ansible/inventories/local_vm/group_vars/local_vm/vars.yml
+ansible/inventories/local_vm/group_vars/local_vm/vault.example.yml
+ansible/inventories/local_vm/group_vars/local_vm/vault.yml
+ansible/inventories/production/group_vars/production/vars.yml
+ansible/inventories/production/group_vars/production/vault.example.yml
 ansible/playbooks/site.yml
 ansible/playbooks/validate.yml
 ansible/roles/common/tasks/main.yml
@@ -70,10 +70,10 @@ ansible/roles/football_club_stack/tasks/main.yml
 ansible/roles/caddy/tasks/main.yml
 ansible/roles/caddy/handlers/main.yml
 ansible/roles/backup/tasks/main.yml
-ansible/templates/docker-compose.yml.j2
-ansible/templates/env.j2
-ansible/templates/Caddyfile.j2
-ansible/templates/backup.sh.j2
+ansible/roles/football_club_stack/templates/docker-compose.yml.j2
+ansible/roles/football_club_stack/templates/env.j2
+ansible/roles/caddy/templates/Caddyfile.j2
+ansible/roles/backup/templates/backup.sh.j2
 ```
 
 Responsibilities:
@@ -81,9 +81,9 @@ Responsibilities:
 - `ansible.cfg`: default inventory, roles path, lint-friendly Ansible defaults.
 - `requirements.yml`: pinned external Ansible collections required by the playbooks.
 - `inventories/*/hosts.yml`: environment host definitions.
-- `group_vars/*/vars.yml`: non-secret environment variables.
-- `vault.example.yml`: required secret variable names with safe dummy values.
-- `vault.yml`: encrypted local VM secrets for test deployment only.
+- `inventories/*/group_vars/*/vars.yml`: non-secret environment variables.
+- `inventories/*/group_vars/*/vault.example.yml`: required secret variable names with safe dummy values.
+- `inventories/local_vm/group_vars/local_vm/vault.yml`: encrypted local VM secrets for test deployment only.
 - `site.yml`: main provision-and-deploy playbook.
 - `validate.yml`: post-deploy runtime checks.
 - `common`: baseline apt packages and directories.
@@ -194,7 +194,8 @@ Create `ansible/ansible.cfg` with this content:
 [defaults]
 inventory = inventories/local_vm/hosts.yml
 roles_path = roles
-stdout_callback = yaml
+stdout_callback = default
+callback_result_format = yaml
 bin_ansible_callbacks = True
 host_key_checking = True
 retry_files_enabled = False
@@ -229,7 +230,7 @@ If `.gitignore` does not exist, create it. Ensure it contains exactly these depl
 *.retry
 .vault-pass
 vault-pass.txt
-ansible/group_vars/*/vault.local.yml
+ansible/inventories/*/group_vars/*/vault.local.yml
 
 # Generated service secrets must never be committed
 .env
@@ -241,7 +242,7 @@ ansible/group_vars/*/vault.local.yml
 *.id-photo.png
 ```
 
-Do not ignore `ansible/group_vars/*/vault.yml`; those files are intended to be committed only after encryption.
+Do not ignore `ansible/inventories/*/group_vars/*/vault.yml`; those files are intended to be committed only after encryption.
 
 - [ ] **Step 5: Run static checks**
 
@@ -281,11 +282,11 @@ Acceptance criteria:
 
 - Create: `ansible/inventories/local_vm/hosts.yml`
 - Create: `ansible/inventories/production/hosts.yml`
-- Create: `ansible/group_vars/local_vm/vars.yml`
-- Create: `ansible/group_vars/local_vm/vault.example.yml`
-- Create: `ansible/group_vars/local_vm/vault.yml`
-- Create: `ansible/group_vars/production/vars.yml`
-- Create: `ansible/group_vars/production/vault.example.yml`
+- Create: `ansible/inventories/local_vm/group_vars/local_vm/vars.yml`
+- Create: `ansible/inventories/local_vm/group_vars/local_vm/vault.example.yml`
+- Create: `ansible/inventories/local_vm/group_vars/local_vm/vault.yml`
+- Create: `ansible/inventories/production/group_vars/production/vars.yml`
+- Create: `ansible/inventories/production/group_vars/production/vault.example.yml`
 
 - [ ] **Step 1: Create local VM inventory**
 
@@ -295,11 +296,13 @@ Create `ansible/inventories/local_vm/hosts.yml`:
 ---
 all:
   children:
-    football_club:
-      hosts:
-        local-vm:
-          ansible_host: 192.0.2.10
-          ansible_user: ubuntu
+    local_vm:
+      children:
+        football_club:
+          hosts:
+            local-vm:
+              ansible_host: 192.0.2.10
+              ansible_user: ubuntu
 ```
 
 `192.0.2.10` is documentation-safe placeholder IP. Before real execution, replace it with the local VM IP.
@@ -312,18 +315,20 @@ Create `ansible/inventories/production/hosts.yml`:
 ---
 all:
   children:
-    football_club:
-      hosts:
-        production:
-          ansible_host: 203.0.113.10
-          ansible_user: ubuntu
+    production:
+      children:
+        football_club:
+          hosts:
+            production:
+              ansible_host: 203.0.113.10
+              ansible_user: ubuntu
 ```
 
 `203.0.113.10` is documentation-safe placeholder IP. Do not run production until this is replaced with the real host.
 
 - [ ] **Step 3: Create local VM non-secret vars**
 
-Create `ansible/group_vars/local_vm/vars.yml`:
+Create `ansible/inventories/local_vm/group_vars/local_vm/vars.yml`:
 
 ```yaml
 ---
@@ -343,7 +348,7 @@ Before real local execution, set `football_club_domain` to the real domain whose
 
 - [ ] **Step 4: Create production non-secret vars**
 
-Create `ansible/group_vars/production/vars.yml` with the same keys:
+Create `ansible/inventories/production/group_vars/production/vars.yml` with the same keys:
 
 ```yaml
 ---
@@ -361,7 +366,7 @@ football_club_doctr_enabled: false
 
 - [ ] **Step 5: Create vault example files**
 
-Create `ansible/group_vars/local_vm/vault.example.yml`:
+Create `ansible/inventories/local_vm/group_vars/local_vm/vault.example.yml`:
 
 ```yaml
 ---
@@ -369,6 +374,7 @@ vault_doli_db_password: "change-me"
 vault_doli_db_root_password: "change-me"
 vault_doli_admin_password: "change-me"
 vault_ninja_app_key: "base64:change-me"
+vault_ninja_admin_password: "change-me"
 vault_ninja_db_password: "change-me"
 vault_ninja_db_root_password: "change-me"
 vault_n8n_encryption_key: "change-me-32-characters-minimum"
@@ -379,24 +385,24 @@ vault_stripe_secret_key: "sk_test_change_me"
 vault_stripe_webhook_secret: "whsec_change_me"
 ```
 
-Create `ansible/group_vars/production/vault.example.yml` with identical content.
+Create `ansible/inventories/production/group_vars/production/vault.example.yml` with identical content.
 
 - [ ] **Step 6: Create encrypted local VM vault**
 
 Create a temporary plaintext file outside the repo:
 
 ```bash
-cp ansible/group_vars/local_vm/vault.example.yml /tmp/fk-cesis-local-vault.yml
+cp ansible/inventories/local_vm/group_vars/local_vm/vault.example.yml /tmp/fk-cesis-local-vault.yml
 ```
 
 Edit `/tmp/fk-cesis-local-vault.yml` and replace dummy values with local test secrets. Then encrypt it into the repo:
 
 ```bash
-ansible-vault encrypt /tmp/fk-cesis-local-vault.yml --output ansible/group_vars/local_vm/vault.yml
+ansible-vault encrypt /tmp/fk-cesis-local-vault.yml --output ansible/inventories/local_vm/group_vars/local_vm/vault.yml
 rm /tmp/fk-cesis-local-vault.yml
 ```
 
-Expected first line of `ansible/group_vars/local_vm/vault.yml`:
+Expected first line of `ansible/inventories/local_vm/group_vars/local_vm/vault.yml`:
 
 ```text
 $ANSIBLE_VAULT;1.1;AES256
@@ -409,7 +415,7 @@ Do not create production `vault.yml` until production secrets exist.
 Run:
 
 ```bash
-yamllint ansible/inventories ansible/group_vars
+yamllint ansible/inventories
 ansible-inventory -i ansible/inventories/local_vm/hosts.yml --list
 ```
 
@@ -421,7 +427,7 @@ Expected:
 - [ ] **Step 8: Commit**
 
 ```bash
-git add ansible/inventories ansible/group_vars/local_vm/vars.yml ansible/group_vars/local_vm/vault.example.yml ansible/group_vars/local_vm/vault.yml ansible/group_vars/production/vars.yml ansible/group_vars/production/vault.example.yml
+git add ansible/inventories
 git commit -m "chore: add ansible inventories and vars"
 ```
 
@@ -567,8 +573,8 @@ Acceptance criteria:
 
 - Modify: `ansible/playbooks/site.yml`
 - Create: `ansible/roles/football_club_stack/tasks/main.yml`
-- Create: `ansible/templates/docker-compose.yml.j2`
-- Create: `ansible/templates/env.j2`
+- Create: `ansible/roles/football_club_stack/templates/docker-compose.yml.j2`
+- Create: `ansible/roles/football_club_stack/templates/env.j2`
 
 - [ ] **Step 1: Add stack role to site playbook**
 
@@ -589,7 +595,7 @@ Modify `ansible/playbooks/site.yml`:
 
 - [ ] **Step 2: Create Compose template**
 
-Create `ansible/templates/docker-compose.yml.j2`:
+Create `ansible/roles/football_club_stack/templates/docker-compose.yml.j2`:
 
 ```yaml
 services:
@@ -629,16 +635,22 @@ services:
     ports:
       - "127.0.0.1:8082:80"
     environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
       APP_URL: https://billing.${DOMAIN}
       APP_KEY: ${NINJA_APP_KEY}
+      REQUIRE_HTTPS: "true"
+      IS_DOCKER: "true"
+      IN_USER_EMAIL: ${ADMIN_EMAIL}
+      IN_PASSWORD: ${NINJA_ADMIN_PASSWORD}
+      IN_USER: Admin
       DB_HOST: ninja-db
       DB_DATABASE: ninja
       DB_USERNAME: ninja
       DB_PASSWORD: ${NINJA_DB_PASSWORD}
       NINJA_LICENSE: self-hosted-open-source
     volumes:
-      - ninja_storage:/var/app/storage
-      - ninja_public:/var/app/public
+      - ninja_storage:/app/storage
     depends_on:
       - ninja-db
 
@@ -690,7 +702,7 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       SECRET_KEY_BASE: ${DOCUSEAL_SECRET_KEY}
-      DATABASE_URL: sqlite3:///data/docuseal.sqlite3
+      WORKDIR: /data
     volumes:
       - docuseal_data:/data
 
@@ -708,7 +720,6 @@ volumes:
   dolibarr_data:
   dolibarr_db_data:
   ninja_storage:
-  ninja_public:
   ninja_db_data:
   n8n_data:
   n8n_db_data:
@@ -717,7 +728,7 @@ volumes:
 
 - [ ] **Step 3: Create env template**
 
-Create `ansible/templates/env.j2`:
+Create `ansible/roles/football_club_stack/templates/env.j2`:
 
 ```jinja
 DOMAIN={{ football_club_domain }}
@@ -725,6 +736,7 @@ DOLI_DB_PASSWORD={{ vault_doli_db_password }}
 DOLI_DB_ROOT_PASSWORD={{ vault_doli_db_root_password }}
 DOLI_ADMIN_PASSWORD={{ vault_doli_admin_password }}
 NINJA_APP_KEY={{ vault_ninja_app_key }}
+NINJA_ADMIN_PASSWORD={{ vault_ninja_admin_password }}
 NINJA_DB_PASSWORD={{ vault_ninja_db_password }}
 NINJA_DB_ROOT_PASSWORD={{ vault_ninja_db_root_password }}
 N8N_ENCRYPTION_KEY={{ vault_n8n_encryption_key }}
@@ -766,6 +778,29 @@ Create `ansible/roles/football_club_stack/tasks/main.yml`:
   changed_when: false
   no_log: true
 
+- name: Prepare InvoiceNinja Docker volumes
+  ansible.builtin.command:
+    cmd: docker volume create {{ football_club_compose_project_name }}_ninja_storage
+  register: football_club_stack_ninja_storage_volume_result
+  changed_when: >
+    football_club_stack_ninja_storage_volume_result.stdout ==
+    football_club_compose_project_name ~ '_ninja_storage'
+
+- name: Initialize InvoiceNinja storage volume for ninja user
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm
+      -v {{ football_club_compose_project_name }}_ninja_storage:/mnt/ninja-volume
+      alpine:3.20
+      sh -c 'mkdir -p
+      /mnt/ninja-volume/framework/cache/data
+      /mnt/ninja-volume/framework/sessions
+      /mnt/ninja-volume/framework/views
+      /mnt/ninja-volume/logs
+      && chown -R 999:999 /mnt/ninja-volume
+      && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
+  changed_when: false
+
 - name: Start football club stack
   ansible.builtin.command:
     cmd: docker compose -p {{ football_club_compose_project_name }} -f {{ football_club_project_dir }}/docker-compose.yml --env-file {{ football_club_project_dir }}/.env up -d
@@ -789,7 +824,7 @@ Expected: all pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ansible/playbooks/site.yml ansible/roles/football_club_stack/tasks/main.yml ansible/templates/docker-compose.yml.j2 ansible/templates/env.j2
+git add ansible/playbooks/site.yml ansible/roles/football_club_stack/tasks/main.yml ansible/roles/football_club_stack/templates/docker-compose.yml.j2 ansible/roles/football_club_stack/templates/env.j2
 git commit -m "feat: render football club compose stack"
 ```
 
@@ -809,7 +844,7 @@ Acceptance criteria:
 - Modify: `ansible/playbooks/site.yml`
 - Create: `ansible/roles/caddy/tasks/main.yml`
 - Create: `ansible/roles/caddy/handlers/main.yml`
-- Create: `ansible/templates/Caddyfile.j2`
+- Create: `ansible/roles/caddy/templates/Caddyfile.j2`
 
 - [ ] **Step 1: Add Caddy role to site playbook**
 
@@ -831,7 +866,7 @@ Modify `ansible/playbooks/site.yml`:
 
 - [ ] **Step 2: Create Caddyfile template**
 
-Create `ansible/templates/Caddyfile.j2`:
+Create `ansible/roles/caddy/templates/Caddyfile.j2`:
 
 ```caddyfile
 {
@@ -940,7 +975,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add ansible/playbooks/site.yml ansible/roles/caddy ansible/templates/Caddyfile.j2
+git add ansible/playbooks/site.yml ansible/roles/caddy
 git commit -m "feat: manage caddy reverse proxy"
 ```
 
@@ -959,7 +994,7 @@ Acceptance criteria:
 
 - Modify: `ansible/playbooks/site.yml`
 - Create: `ansible/roles/backup/tasks/main.yml`
-- Create: `ansible/templates/backup.sh.j2`
+- Create: `ansible/roles/backup/templates/backup.sh.j2`
 
 - [ ] **Step 1: Add backup role to site playbook**
 
@@ -982,7 +1017,7 @@ Modify `ansible/playbooks/site.yml`:
 
 - [ ] **Step 2: Create backup script template**
 
-Create `ansible/templates/backup.sh.j2`:
+Create `ansible/roles/backup/templates/backup.sh.j2`:
 
 ```jinja
 #!/bin/bash
@@ -1052,7 +1087,7 @@ Expected: all pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add ansible/playbooks/site.yml ansible/roles/backup/tasks/main.yml ansible/templates/backup.sh.j2
+git add ansible/playbooks/site.yml ansible/roles/backup
 git commit -m "feat: install backup automation"
 ```
 
@@ -1208,8 +1243,8 @@ ansible-galaxy collection install -r ansible/requirements.yml
    - `n8n.<domain>`
    - `agreements.<domain>`
 4. Update `ansible/inventories/local_vm/hosts.yml` with the VM IP.
-5. Update `ansible/group_vars/local_vm/vars.yml` with the real domain and admin email.
-6. Create encrypted `ansible/group_vars/local_vm/vault.yml` from `vault.example.yml`.
+5. Update `ansible/inventories/local_vm/group_vars/local_vm/vars.yml` with the real domain and admin email.
+6. Create encrypted `ansible/inventories/local_vm/group_vars/local_vm/vault.yml` from `vault.example.yml`.
 
 ## Required checks
 
@@ -1392,7 +1427,7 @@ Acceptance criteria:
 Before claiming completion:
 
 - [ ] No plaintext secrets are present in git diff.
-- [ ] `ansible/group_vars/local_vm/vault.yml` starts with `$ANSIBLE_VAULT;` if committed.
+- [ ] `ansible/inventories/local_vm/group_vars/local_vm/vault.yml` starts with `$ANSIBLE_VAULT;` if committed.
 - [ ] `docs/html/implementation-plan.html` is unchanged.
 - [ ] `ansible-lint` passes.
 - [ ] `yamllint .` passes.

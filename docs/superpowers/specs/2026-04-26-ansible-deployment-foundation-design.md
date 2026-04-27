@@ -65,8 +65,8 @@ Ansible starts and restarts the stack through Docker Compose.
 
 Secrets are stored in encrypted Ansible Vault files:
 
-- `ansible/group_vars/local_vm/vault.yml`
-- `ansible/group_vars/production/vault.yml`
+- `ansible/inventories/local_vm/group_vars/local_vm/vault.yml`
+- `ansible/inventories/production/group_vars/production/vault.yml`
 
 Only encrypted vault files may contain real secrets. Safe examples are committed for operators:
 

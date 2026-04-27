@@ -25,6 +25,29 @@
   changed_when: false
   no_log: true
 
+- name: Prepare InvoiceNinja Docker volumes
+  ansible.builtin.command:
+    cmd: docker volume create {{ football_club_compose_project_name }}_ninja_storage
+  register: football_club_stack_ninja_storage_volume_result
+  changed_when: >
+    football_club_stack_ninja_storage_volume_result.stdout ==
+    football_club_compose_project_name ~ '_ninja_storage'
+
+- name: Initialize InvoiceNinja storage volume for ninja user
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm
+      -v {{ football_club_compose_project_name }}_ninja_storage:/mnt/ninja-volume
+      alpine:3.20
+      sh -c 'mkdir -p
+      /mnt/ninja-volume/framework/cache/data
+      /mnt/ninja-volume/framework/sessions
+      /mnt/ninja-volume/framework/views
+      /mnt/ninja-volume/logs
+      && chown -R 999:999 /mnt/ninja-volume
+      && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
+  changed_when: false
+
 - name: Start football club stack
   ansible.builtin.command:
     cmd: >

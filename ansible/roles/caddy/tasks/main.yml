@@ -1,7 +1,8 @@
 ---
 - name: Install Caddy
   ansible.builtin.apt:
-    name: caddy
+    name:
+      - caddy
     state: present
     update_cache: true
 

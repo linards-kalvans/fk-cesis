@@ -1,0 +1,11 @@
+---
+football_club_domain: "mplytics.eu"
+football_club_admin_email: "admin@mplytics.eu"
+football_club_project_dir: "/opt/fk-cesis"
+football_club_backup_dir: "/opt/backups/fk-cesis"
+football_club_backup_remote: "linards@192.168.3.249:/opt/backups/fk-cesis/"
+football_club_timezone: "Europe/Riga"
+football_club_caddyfile_path: "/etc/caddy/Caddyfile"
+football_club_caddy_backup_dir: "/etc/caddy/backups"
+football_club_compose_project_name: "fk-cesis"
+football_club_doctr_enabled: false

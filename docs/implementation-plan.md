@@ -98,16 +98,22 @@ services:
     image: invoiceninja/invoiceninja-octane:latest
     restart: unless-stopped
     environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
       APP_URL: https://billing.${DOMAIN}
       APP_KEY: ${NINJA_APP_KEY}
+      REQUIRE_HTTPS: "true"
+      IS_DOCKER: "true"
+      IN_USER_EMAIL: ${ADMIN_EMAIL}
+      IN_PASSWORD: ${NINJA_ADMIN_PASSWORD}
+      IN_USER: Admin
       DB_HOST: ninja-db
       DB_DATABASE: ninja
       DB_USERNAME: ninja
       DB_PASSWORD: ${NINJA_DB_PASSWORD}
       NINJA_LICENSE: self-hosted-open-source
     volumes:
-      - ninja_storage:/var/app/storage
-      - ninja_public:/var/app/public
+      - ninja_storage:/app/storage
     depends_on:
       - ninja-db
 
@@ -155,9 +161,11 @@ services:
   docuseal:
     image: docuseal/docuseal:latest
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
     environment:
       SECRET_KEY_BASE: ${DOCUSEAL_SECRET_KEY}
-      DATABASE_URL: sqlite3:///data/docuseal.sqlite3
+      WORKDIR: /data
     volumes:
       - docuseal_data:/data
 
@@ -174,7 +182,6 @@ volumes:
   dolibarr_data:
   dolibarr_db_data:
   ninja_storage:
-  ninja_public:
   ninja_db_data:
   n8n_data:
   n8n_db_data:
@@ -873,6 +880,7 @@ DOLI_API_KEY=                    # generated in Dolibarr admin after setup
 
 # InvoiceNinja
 NINJA_APP_KEY=                   # generate with: php artisan key:generate --show
+NINJA_ADMIN_PASSWORD=
 NINJA_DB_PASSWORD=
 NINJA_DB_ROOT_PASSWORD=
 NINJA_API_KEY=                   # generated in IN admin → API Tokens
