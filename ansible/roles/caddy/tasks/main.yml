@@ -35,7 +35,7 @@
 
 - name: Render managed Caddyfile
   ansible.builtin.template:
-    src: Caddyfile.j2
+    src: "Caddyfile-{{ football_club_caddy_mode }}.j2"
     dest: "{{ football_club_caddyfile_path }}"
     owner: root
     group: root
