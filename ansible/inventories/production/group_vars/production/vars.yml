@@ -9,3 +9,6 @@ football_club_caddyfile_path: "/etc/caddy/Caddyfile"
 football_club_caddy_backup_dir: "/etc/caddy/backups"
 football_club_compose_project_name: "football-club"
 football_club_doctr_enabled: false
+football_club_caddy_mode: "subdomain"
+football_club_caddy_http_port: 80
+football_club_caddy_https_port: 443
