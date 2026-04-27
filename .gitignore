@@ -17,3 +17,7 @@ ansible/inventories/*/group_vars/*/vault.local.yml
 *.id-photo.jpg
 *.id-photo.jpeg
 *.id-photo.png
+
+# Ansible vault backups must never be committed
+*.vault.yml.bak
+vault.yml.bak
