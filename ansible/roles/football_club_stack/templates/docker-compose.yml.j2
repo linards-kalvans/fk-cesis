@@ -12,7 +12,7 @@ services:
       DOLI_DB_PASSWORD: ${DOLI_DB_PASSWORD}
       DOLI_ADMIN_LOGIN: admin
       DOLI_ADMIN_PASSWORD: ${DOLI_ADMIN_PASSWORD}
-      DOLI_URL_ROOT: {{ dolibarr_url_root }}
+      DOLI_URL_ROOT: {{ football_club_stack_dolibarr_url_root }}
       DOLI_AUTH: dolibarr
     volumes:
       - dolibarr_data:/var/www/html/documents
@@ -38,7 +38,7 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: {{ invoiceninja_app_url }}
+      APP_URL: {{ football_club_stack_invoiceninja_app_url }}
       APP_KEY: ${NINJA_APP_KEY}
       REQUIRE_HTTPS: "true"
       IS_DOCKER: "true"
@@ -72,9 +72,9 @@ services:
     ports:
       - "127.0.0.1:5678:5678"
     environment:
-      N8N_HOST: {{ n8n_host }}
+      N8N_HOST: {{ football_club_stack_n8n_host }}
       N8N_PORT: 5678
-      WEBHOOK_URL: {{ n8n_webhook_url }}
+      WEBHOOK_URL: {{ football_club_stack_n8n_webhook_url }}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: n8n-db
