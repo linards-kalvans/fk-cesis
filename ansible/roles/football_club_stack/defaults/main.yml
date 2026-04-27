@@ -1,20 +1,12 @@
 ---
 football_club_stack_dolibarr_url_root: >-
-  {{ 'https://' ~ football_club_domain ~ '/club'
-     if football_club_caddy_mode == 'path'
-     else 'https://club.' ~ football_club_domain }}
+  {{ ('https://' ~ football_club_domain ~ '/club') if football_club_caddy_mode == 'path' else ('https://club.' ~ football_club_domain) }}
 
 football_club_stack_invoiceninja_app_url: >-
-  {{ 'https://' ~ football_club_domain ~ '/billing'
-     if football_club_caddy_mode == 'path'
-     else 'https://billing.' ~ football_club_domain }}
+  {{ ('https://' ~ football_club_domain ~ '/billing') if football_club_caddy_mode == 'path' else ('https://billing.' ~ football_club_domain) }}
 
 football_club_stack_n8n_host: >-
-  {{ football_club_domain
-     if football_club_caddy_mode == 'path'
-     else 'n8n.' ~ football_club_domain }}
+  {{ (football_club_domain) if football_club_caddy_mode == 'path' else ('n8n.' ~ football_club_domain) }}
 
 football_club_stack_n8n_webhook_url: >-
-  {{ 'https://' ~ football_club_domain ~ '/n8n/'
-     if football_club_caddy_mode == 'path'
-     else 'https://n8n.' ~ football_club_domain ~ '/' }}
+  {{ ('https://' ~ football_club_domain ~ '/n8n/') if football_club_caddy_mode == 'path' else ('https://n8n.' ~ football_club_domain ~ '/') }}
