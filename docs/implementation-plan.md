@@ -194,7 +194,12 @@ Ansible renders `/opt/football-club/.env` from encrypted Ansible Vault variables
 
 Ansible installs and manages Caddy. If the target host already has a Caddyfile, back it up before replacing it with the managed configuration.
 
-Managed Caddyfile:
+Caddy routing mode is controlled by the `football_club_caddy_mode` inventory variable:
+
+- `subdomain` — each service gets its own subdomain (production default)
+- `path` — all services share one domain with path prefixes (local VM / Tailscale)
+
+**Subdomain mode Caddyfile:**
 
 ```
 club.{$DOMAIN} {
@@ -213,6 +218,34 @@ agreements.{$DOMAIN} {
   reverse_proxy docuseal:3000
 }
 ```
+
+**Path mode Caddyfile:**
+
+```
+{$DOMAIN} {
+  handle_path /club/* {
+    reverse_proxy dolibarr:80
+  }
+
+  handle_path /billing/* {
+    reverse_proxy invoiceninja:80
+  }
+
+  handle_path /n8n/* {
+    reverse_proxy n8n:5678
+  }
+
+  handle_path /agreements/* {
+    reverse_proxy docuseal:3000
+  }
+
+  handle {
+    redir /club/
+  }
+}
+```
+
+Service containers receive correctly computed `*_URL` environment variables so self-referential links (emails, redirects, webhooks) match the external access pattern.
 
 ### Dolibarr initial configuration
 
