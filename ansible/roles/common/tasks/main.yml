@@ -3,6 +3,7 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
+  become: true
 
 - name: Install baseline packages
   ansible.builtin.apt:
@@ -16,6 +17,7 @@
       - rsync
       - tar
     state: present
+  become: true
 
 - name: Ensure project directory exists
   ansible.builtin.file:
