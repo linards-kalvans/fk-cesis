@@ -55,7 +55,7 @@ football_club_admin_email: "admin@example.lv"  # Caddy SMTP postmaster address
 
 ### 3. DNS names to point at the VM IP
 
-Create A records for these four subdomains, all resolving to `ansible_host`:
+For **subdomain mode** (production): create A records for these four subdomains, all resolving to `ansible_host`:
 
 | Subdomain | Served by |
 |---|---|
@@ -71,6 +71,26 @@ club.example.lv       → 192.0.2.10
 billing.example.lv    → 192.0.2.10
 n8n.example.lv        → 192.0.2.10
 agreements.example.lv → 192.0.2.10
+```
+
+For **local mode** (`.lan` hostnames with internal TLS): add host entries on every client machine that will access the VM, then import Caddy's root CA certificate so browsers trust the self-signed HTTPS.
+
+**a) `/etc/hosts` mapping** (run on each client):
+
+```bash
+sudo tee -a /etc/hosts <<EOF
+192.168.x.x club.lan billing.lan n8n.lan agreements.lan
+EOF
+```
+
+Replace `192.168.x.x` with the actual VM LAN IP.
+
+**b) Import Caddy's internal CA certificate** (run on each client after the first Ansible run):
+
+```bash
+scp ubuntu@192.168.x.x:/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt ~/caddy-local-ca.crt
+sudo cp ~/caddy-local-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
 ```
 
 ### 4. Encrypted vault — secrets never committed
