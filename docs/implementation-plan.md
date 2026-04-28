@@ -196,8 +196,8 @@ Ansible installs and manages Caddy. If the target host already has a Caddyfile, 
 
 Caddy routing mode is controlled by the `football_club_caddy_mode` inventory variable:
 
-- `subdomain` — each service gets its own subdomain (production default)
-- `path` — all services share one domain with path prefixes (local VM / Tailscale)
+- `subdomain` — each service gets its own subdomain with ACME TLS (production default)
+- `local` — `.lan` hostnames with Caddy internal TLS (local VM)
 
 **Subdomain mode Caddyfile:**
 
@@ -219,33 +219,70 @@ agreements.{$DOMAIN} {
 }
 ```
 
-**Path mode Caddyfile:**
+**Local mode Caddyfile:**
 
 ```
-{$DOMAIN} {
-  handle_path /club/* {
-    reverse_proxy dolibarr:80
-  }
+{
+  http_port 80
+  https_port 443
+}
 
-  handle_path /billing/* {
-    reverse_proxy invoiceninja:80
-  }
+club.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:8081
+}
 
-  handle_path /n8n/* {
-    reverse_proxy n8n:5678
-  }
+billing.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:8082
+}
 
-  handle_path /agreements/* {
-    reverse_proxy docuseal:3000
-  }
+n8n.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:5678
+}
 
-  handle {
-    redir /club/
-  }
+agreements.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:3000
 }
 ```
 
 Service containers receive correctly computed `*_URL` environment variables so self-referential links (emails, redirects, webhooks) match the external access pattern.
+
+**Local client setup:**
+After deploying the local VM, each Linux client needs the VM IP added to `/etc/hosts`:
+
+```bash
+sudo tee -a /etc/hosts <<EOF
+192.168.x.x club.lan billing.lan n8n.lan agreements.lan
+EOF
+```
+
+And Caddy's internal CA certificate imported:
+
+```bash
+scp user@vm:/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt ~/caddy-local-ca.crt
+sudo cp ~/caddy-local-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+```
+
+**Local client setup:**
+After deploying the local VM, each Linux client needs the VM IP added to `/etc/hosts`:
+
+```bash
+sudo tee -a /etc/hosts <<EOF
+192.168.x.x club.lan billing.lan n8n.lan agreements.lan
+EOF
+```
+
+And Caddy's internal CA certificate imported:
+
+```bash
+scp user@vm:/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt ~/caddy-local-ca.crt
+sudo cp ~/caddy-local-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+```
 
 ### Dolibarr initial configuration
 
