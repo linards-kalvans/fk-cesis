@@ -267,23 +267,6 @@ sudo cp ~/caddy-local-ca.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
 
-**Local client setup:**
-After deploying the local VM, each Linux client needs the VM IP added to `/etc/hosts`:
-
-```bash
-sudo tee -a /etc/hosts <<EOF
-192.168.x.x club.lan billing.lan n8n.lan agreements.lan
-EOF
-```
-
-And Caddy's internal CA certificate imported:
-
-```bash
-scp user@vm:/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt ~/caddy-local-ca.crt
-sudo cp ~/caddy-local-ca.crt /usr/local/share/ca-certificates/
-sudo update-ca-certificates
-```
-
 ### Dolibarr initial configuration
 
 After first boot, enable the following modules via **Home → Setup → Modules**:
