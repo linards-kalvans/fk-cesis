@@ -9,6 +9,6 @@ football_club_caddyfile_path: "/etc/caddy/Caddyfile"
 football_club_caddy_backup_dir: "/etc/caddy/backups"
 football_club_compose_project_name: "fk-cesis"
 football_club_doctr_enabled: false
-football_club_caddy_mode: "path"
+football_club_caddy_mode: "local"
 football_club_caddy_http_port: 80
 football_club_caddy_https_port: 443

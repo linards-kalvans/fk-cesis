@@ -32,20 +32,16 @@
     - name: Set service endpoint URLs
       ansible.builtin.set_fact:
         dolibarr_endpoint: >-
-          {{ 'https://' ~ football_club_domain ~ '/club/'
-             if football_club_caddy_mode == 'path'
+          {{ 'https://club.lan/' if football_club_caddy_mode == 'local'
              else 'https://club.' ~ football_club_domain ~ '/' }}
         billing_endpoint: >-
-          {{ 'https://' ~ football_club_domain ~ '/billing/'
-             if football_club_caddy_mode == 'path'
+          {{ 'https://billing.lan/' if football_club_caddy_mode == 'local'
              else 'https://billing.' ~ football_club_domain ~ '/' }}
         n8n_endpoint: >-
-          {{ 'https://' ~ football_club_domain ~ '/n8n/'
-             if football_club_caddy_mode == 'path'
+          {{ 'https://n8n.lan/' if football_club_caddy_mode == 'local'
              else 'https://n8n.' ~ football_club_domain ~ '/' }}
         agreements_endpoint: >-
-          {{ 'https://' ~ football_club_domain ~ '/agreements/'
-             if football_club_caddy_mode == 'path'
+          {{ 'https://agreements.lan/' if football_club_caddy_mode == 'local'
              else 'https://agreements.' ~ football_club_domain ~ '/' }}
 
     - name: Check Dolibarr HTTP endpoint

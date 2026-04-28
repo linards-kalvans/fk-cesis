@@ -1,0 +1,24 @@
+{
+  http_port {{ football_club_caddy_http_port }}
+  https_port {{ football_club_caddy_https_port }}
+}
+
+club.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:8081
+}
+
+billing.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:8082
+}
+
+n8n.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:5678
+}
+
+agreements.lan {
+  tls internal
+  reverse_proxy 127.0.0.1:3000
+}
