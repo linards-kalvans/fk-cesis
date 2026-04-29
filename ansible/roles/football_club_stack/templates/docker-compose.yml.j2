@@ -31,32 +31,62 @@ services:
       - dolibarr_db_data:/var/lib/mysql
 
   invoiceninja:
-    image: invoiceninja/invoiceninja-octane:latest
+    image: invoiceninja/invoiceninja-debian:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8082:80"
     environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
       APP_URL: {{ football_club_stack_invoiceninja_app_url }}
       APP_KEY: ${NINJA_APP_KEY}
-      REQUIRE_HTTPS: "true"
-      IS_DOCKER: "true"
-      IN_USER_EMAIL: ${ADMIN_EMAIL}
-      IN_PASSWORD: ${NINJA_ADMIN_PASSWORD}
-      IN_USER: Admin
+      APP_ENV: production
+      APP_DEBUG: true
+      REQUIRE_HTTPS: false
+      PHANTOMJS_PDF_GENERATION: false
+      PDF_GENERATOR: snappdf
+      TRUSTED_PROXIES: '*'
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_HOST: ninja-cache
+      REDIS_PASSWORD: 
+      REDIS_PORT: 6379
+      FILESYSTEM_DISK: debian_docker
+      # DB connection
       DB_HOST: ninja-db
+      DB_PORT: 3306
       DB_DATABASE: ninja
       DB_USERNAME: ninja
       DB_PASSWORD: ${NINJA_DB_PASSWORD}
-      NINJA_LICENSE: self-hosted-open-source
+      DB_ROOT_PASSWORD: ${NINJA_DB_ROOT_PASSWORD}
+      DB_CONNECTION: mariadb
+      # Create initial user
+      # Default to these values if empty
+      IN_USER_EMAIL: admin@example.com
+      IN_PASSWORD: changeme!
+      # IN_USER_EMAIL=
+      # IN_PASSWORD=
+      # Mail options
+      # MAIL_MAILER: log
+      # MAIL_HOST: smtp.mailtrap.io
+      # MAIL_PORT: 2525
+      # MAIL_USERNAME: null
+      # MAIL_PASSWORD: null
+      # MAIL_ENCRYPTION: null
+      # MAIL_FROM_ADDRESS: 'user@example.com'
+      # MAIL_FROM_NAME: 'Self Hosted User'
+
     volumes:
-      - ninja_storage:/app/storage
+      # - ./php/php.ini:/usr/local/etc/php/conf.d/invoiceninja.ini:ro
+      # - ./php/php-fpm.conf:/usr/local/etc/php-fpm.d/invoiceninja.conf:ro
+      # - ./supervisor/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro
+      - app_public:/var/www/html/public
+      - app_storage:/var/www/html/storage
     depends_on:
-      - ninja-db
+      ninja-db:
+        condition: service_healthy
+      ninja-cache:
+        condition: service_healthy
 
   ninja-db:
-    image: mariadb:10.6
+    image: mariadb:lts
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ninja
@@ -65,6 +95,33 @@ services:
       MYSQL_ROOT_PASSWORD: ${NINJA_DB_ROOT_PASSWORD}
     volumes:
       - ninja_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ninja-cache:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+      - app_public:/var/www/html/public:ro
+      - app_storage:/var/www/html/storage:ro
+    depends_on:
+      invoiceninja:
+        condition: service_healthy
 
   n8n:
     image: n8nio/n8n:latest
@@ -76,6 +133,9 @@ services:
       N8N_PORT: 5678
       WEBHOOK_URL: {{ football_club_stack_n8n_webhook_url }}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+{% if football_club_caddy_mode == 'local' %}
+      N8N_SECURE_COOKIE: "false"
+{% endif %}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: n8n-db
       DB_POSTGRESDB_DATABASE: n8n
@@ -121,7 +181,9 @@ services:
 volumes:
   dolibarr_data:
   dolibarr_db_data:
-  ninja_storage:
+  app_public:
+  app_storage:
+  redis_data:
   ninja_db_data:
   n8n_data:
   n8n_db_data:

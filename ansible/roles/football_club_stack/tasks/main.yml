@@ -27,19 +27,46 @@
   changed_when: false
   no_log: true
 
+- name: Create nginx config directory
+  ansible.builtin.file:
+    path: "{{ football_club_project_dir }}/nginx"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Deploy nginx InvoiceNinja config
+  ansible.builtin.template:
+    src: invoiceninja.conf
+    dest: "{{ football_club_project_dir }}/nginx/invoiceninja.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+- name: Deploy nginx Laravel config
+  ansible.builtin.template:
+    src: laravel.conf
+    dest: "{{ football_club_project_dir }}/nginx/laravel.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
 - name: Prepare InvoiceNinja Docker volumes
   ansible.builtin.command:
-    cmd: docker volume create {{ football_club_compose_project_name }}_ninja_storage
-  register: football_club_stack_ninja_storage_volume_result
+    cmd: docker volume create {{ football_club_compose_project_name }}_app_storage
+  register: football_club_stack_app_storage_volume_result
   changed_when: >
-    football_club_stack_ninja_storage_volume_result.stdout ==
-    football_club_compose_project_name ~ '_ninja_storage'
+    football_club_stack_app_storage_volume_result.stdout ==
+    football_club_compose_project_name ~ '_app_storage'
 
 - name: Initialize InvoiceNinja storage volume for ninja user
   ansible.builtin.command:
     cmd: >
       docker run --rm
-      -v {{ football_club_compose_project_name }}_ninja_storage:/mnt/ninja-volume
+      -v {{ football_club_compose_project_name }}_app_storage:/mnt/ninja-volume
       alpine:3.20
       sh -c 'mkdir -p
       /mnt/ninja-volume/framework/cache/data

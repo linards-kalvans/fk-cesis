@@ -1,12 +1,12 @@
 ---
 football_club_stack_dolibarr_url_root: >-
-  {{ 'https://club.lan' if football_club_caddy_mode == 'local' else 'https://club.' ~ football_club_domain }}
+  {{ 'http://club.lan' if football_club_caddy_mode == 'local' else 'https://club.' ~ football_club_domain }}
 
 football_club_stack_invoiceninja_app_url: >-
-  {{ 'https://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
+  {{ 'http://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
 
 football_club_stack_n8n_host: >-
   {{ 'n8n.lan' if football_club_caddy_mode == 'local' else 'n8n.' ~ football_club_domain }}
 
 football_club_stack_n8n_webhook_url: >-
-  {{ 'https://n8n.lan/' if football_club_caddy_mode == 'local' else 'https://n8n.' ~ football_club_domain ~ '/' }}
+  {{ 'http://n8n.lan/' if football_club_caddy_mode == 'local' else 'https://n8n.' ~ football_club_domain ~ '/' }}
