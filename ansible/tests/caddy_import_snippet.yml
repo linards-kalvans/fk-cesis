@@ -1,0 +1,57 @@
+---
+- name: Regression test for imported Caddy snippet implementation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  tasks:
+    - name: Read caddy role tasks
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/caddy/tasks/main.yml"
+      register: caddy_role_tasks
+
+    - name: Read subdomain snippet template
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/caddy/templates/Caddyfile-subdomain.j2"
+      register: caddy_subdomain_template
+
+    - name: Read local snippet template
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/caddy/templates/Caddyfile-local.j2"
+      register: caddy_local_template
+
+    - name: Read production inventory vars
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/production/group_vars/production/vars.yml"
+      register: production_vars
+
+    - name: Read local VM inventory vars
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/local_vm/group_vars/local_vm/vars.yml"
+      register: local_vm_vars
+
+    - name: Assert caddy role manages imported snippet instead of replacing main file
+      ansible.builtin.assert:
+        that:
+          - "'football_club_caddy_snippet_path' in (production_vars.content | b64decode)"
+          - "'football_club_caddy_snippet_path' in (local_vm_vars.content | b64decode)"
+          - >-
+            (caddy_role_tasks.content | b64decode)
+            is search('dest:\\s+"\\{\\{ football_club_caddy_snippet_path \\}\\}"')
+          - >-
+            (caddy_role_tasks.content | b64decode)
+            is search('import \\{\\{ football_club_caddy_snippet_path \\}\\}')
+          - "'lineinfile' in (caddy_role_tasks.content | b64decode)"
+          - >-
+            ((caddy_role_tasks.content | b64decode)
+            is not search('dest:\\s+"\\{\\{ football_club_caddyfile_path \\}\\}"'))
+          - "'http_port' not in (caddy_subdomain_template.content | b64decode)"
+          - "'https_port' not in (caddy_subdomain_template.content | b64decode)"
+          - >-
+            ((caddy_subdomain_template.content | b64decode)
+            is not search('email \\{\\{ football_club_admin_email \\}\\}'))
+          - "'http_port' not in (caddy_local_template.content | b64decode)"
+          - "'https_port' not in (caddy_local_template.content | b64decode)"

@@ -31,41 +31,18 @@
 
     - name: Set service endpoint URLs
       ansible.builtin.set_fact:
-        dolibarr_endpoint: >-
-          {{ 'https://club.lan/' if football_club_caddy_mode == 'local'
-             else 'https://club.' ~ football_club_domain ~ '/' }}
         billing_endpoint: >-
           {{ 'https://billing.lan/' if football_club_caddy_mode == 'local'
              else 'https://billing.' ~ football_club_domain ~ '/' }}
-        n8n_endpoint: >-
-          {{ 'https://n8n.lan/' if football_club_caddy_mode == 'local'
-             else 'https://n8n.' ~ football_club_domain ~ '/' }}
         agreements_endpoint: >-
           {{ 'https://agreements.lan/' if football_club_caddy_mode == 'local'
              else 'https://agreements.' ~ football_club_domain ~ '/' }}
-
-    - name: Check Dolibarr HTTP endpoint
-      ansible.builtin.uri:
-        url: "{{ dolibarr_endpoint }}"
-        method: GET
-        status_code:
-          - 200
-          - 302
-        return_content: false
 
     - name: Check InvoiceNinja HTTP endpoint
       ansible.builtin.uri:
         url: "{{ billing_endpoint }}"
         method: GET
-        status_code:
-          - 200
-          - 302
-        return_content: false
-
-    - name: Check n8n HTTP endpoint
-      ansible.builtin.uri:
-        url: "{{ n8n_endpoint }}"
-        method: GET
+        validate_certs: "{{ football_club_caddy_mode != 'local' }}"
         status_code:
           - 200
           - 302
@@ -75,6 +52,7 @@
       ansible.builtin.uri:
         url: "{{ agreements_endpoint }}"
         method: GET
+        validate_certs: "{{ football_club_caddy_mode != 'local' }}"
         status_code:
           - 200
           - 302

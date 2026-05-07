@@ -73,7 +73,7 @@
       /mnt/ninja-volume/framework/sessions
       /mnt/ninja-volume/framework/views
       /mnt/ninja-volume/logs
-      && chown -R 999:999 /mnt/ninja-volume
+      && chown -R 33:33 /mnt/ninja-volume
       && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
   changed_when: false
 
@@ -88,4 +88,4 @@
     'Started' in football_club_stack_compose_up_result.stderr or
     'Created' in football_club_stack_compose_up_result.stderr or
     'Recreated' in football_club_stack_compose_up_result.stderr
-  no_log: true
+  no_log: false

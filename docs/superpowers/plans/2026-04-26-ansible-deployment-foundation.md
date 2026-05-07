@@ -1,5 +1,7 @@
 # Ansible Deployment Foundation Implementation Plan
 
+> Historical-only note for current repo work: this entire document is retained only for repo history and is not current guidance. Use `docs/implementation-plan.md` as the active owner for current repo work, narrowed by `docs/superpowers/specs/2026-05-04-ansible-scope-reduction-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a repeatable Ansible deployment foundation that provisions an Ubuntu LTS VM, renders the FK CĒSIS Docker Compose stack, manages Caddy, installs backups, and verifies the services with mandatory Ansible checks and HTTP smoke tests.

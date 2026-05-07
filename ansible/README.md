@@ -1,6 +1,6 @@
 # FK CĒSIS Ansible Deployment
 
-This directory deploys the Phase 1 foundation for the FK CĒSIS club platform.
+This directory deploys the current FK CĒSIS environment foundation: InvoiceNinja, Docuseal, Caddy, and backup automation.
 
 ## Requirements
 
@@ -31,12 +31,12 @@ all:
         football_club:
           hosts:
             local-vm:
-              ansible_host: 192.0.2.10   # VM IP or hostname
-              ansible_user: ubuntu       # SSH login user (e.g. ubuntu, admin)
-#              ansible_ssh_private_key_file: ~/.ssh/id_ed25519   # uncomment if not using default key
+              ansible_host: 192.0.2.10
+              ansible_user: ubuntu
+#              ansible_ssh_private_key_file: ~/.ssh/id_ed25519
 ```
 
-**Quick SSH test** (replace `192.0.2.10` and `ubuntu` with your values):
+**Quick SSH test**:
 
 ```bash
 ssh ubuntu@192.0.2.10 "echo OK"
@@ -46,46 +46,42 @@ A successful login confirms Ansible can reach the host.
 
 ### 2. Group vars — set domain and admin email
 
-Edit `ansible/inventories/local_vm/group_vars/local_vm/vars.yml`. This controls all service subdomains.
+Edit `ansible/inventories/local_vm/group_vars/local_vm/vars.yml`.
 
 ```yaml
-football_club_domain: "example.lv"            # your real domain
-football_club_admin_email: "admin@example.lv"  # Caddy SMTP postmaster address
+football_club_domain: "example.lv"
+football_club_admin_email: "admin@example.lv"
 ```
 
 ### 3. DNS names to point at the VM IP
 
-For **subdomain mode** (production): create A records for these four subdomains, all resolving to `ansible_host`:
+For `subdomain` mode, create A records for the active public endpoints:
 
 | Subdomain | Served by |
 |---|---|
-| `club.<domain>` | Dolibarr (WordPress-like admin portal) |
-| `billing.<domain>` | Invoice Ninja |
-| `n8n.<domain>` | n8n workflow engine |
-| `agreements.<domain>` | Docuseal e-signature service |
+| `billing.<domain>` | InvoiceNinja |
+| `agreements.<domain>` | Docuseal |
 
 Example for `example.lv`:
 
-```
-club.example.lv       → 192.0.2.10
-billing.example.lv    → 192.0.2.10
-n8n.example.lv        → 192.0.2.10
-agreements.example.lv → 192.0.2.10
+```text
+billing.example.lv    -> 192.0.2.10
+agreements.example.lv -> 192.0.2.10
 ```
 
-For **local mode** (`.lan` hostnames with internal TLS): add host entries on every client machine that will access the VM, then import Caddy's root CA certificate so browsers trust the self-signed HTTPS.
+For `local` mode (`.lan` hostnames with internal TLS), add host entries on every client machine that will access the VM, then import Caddy's root CA certificate so browsers trust the self-signed HTTPS.
 
-**a) `/etc/hosts` mapping** (run on each client):
+**a) `/etc/hosts` mapping**:
 
 ```bash
-sudo tee -a /etc/hosts <<EOF
-192.168.x.x club.lan billing.lan n8n.lan agreements.lan
-EOF
+sudo tee -a /etc/hosts <<'HOSTS_EOF'
+192.168.x.x billing.lan agreements.lan
+HOSTS_EOF
 ```
 
 Replace `192.168.x.x` with the actual VM LAN IP.
 
-**b) Import Caddy's internal CA certificate** (run on each client after the first Ansible run):
+**b) Import Caddy's internal CA certificate**:
 
 ```bash
 scp ubuntu@192.168.x.x:/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt ~/caddy-local-ca.crt
@@ -101,16 +97,15 @@ sudo update-ca-certificates
 cp ansible/inventories/local_vm/group_vars/local_vm/vault.example.yml /tmp/local-vault.yml
 ```
 
-Edit `/tmp/local-vault.yml` with real or test values (see secret rules below).
+Edit `/tmp/local-vault.yml` with real or test values.
 
 **Step B — encrypt to the tracked location:**
 
 ```bash
-ansible-vault encrypt --output ansible/inventories/local_vm/group_vars/local_vm/vault.yml \
-  /tmp/local-vault.yml
+ansible-vault encrypt --output ansible/inventories/local_vm/group_vars/local_vm/vault.yml   /tmp/local-vault.yml
 ```
 
-This prompts for a vault password interactively, writes the encrypted file to the tracked location, and leaves `/tmp/local-vault.yml` as plaintext for your review. Delete it after confirming the output:
+Delete the plaintext staging file after verifying the encrypted output:
 
 ```bash
 rm -f /tmp/local-vault.yml
@@ -122,48 +117,32 @@ rm -f /tmp/local-vault.yml
 ansible-vault edit ansible/inventories/local_vm/group_vars/local_vm/vault.yml
 ```
 
-The default editor (`$EDITOR`, usually `vim`) opens the decrypted contents. Save and exit to write.
-
 ### 5. Secret values for local VM testing
 
-For local/development VMs you can safely use Stripe test keys provided by the vault example:
+For local testing, use non-production credentials only.
 
-```yaml
-vault_stripe_publishable_key: "pk_test_..."
-vault_stripe_secret_key:     "sk_test_..."
-vault_stripe_webhook_secret:  "whsec_test_..."
-```
-
-**Never commit live Stripe secrets** (`pk_live_`, `sk_live_`) to this repository.
-
-For database passwords, encryption keys, and other secrets, generate random values:
+Generate random values for database passwords, encryption keys, and application secrets:
 
 ```bash
-# 32 bytes → base64 ≈ 44 chars (suitable for db passwords)
 openssl rand -base64 32
-
-# 64 bytes → base64 ≈ 88 chars (suitable for encryption keys)
 openssl rand -base64 64
 ```
 
-### Retry / dry-run
+Never commit live secrets or plaintext vault contents.
+
+## Retry / dry-run
 
 After every Ansible change, before applying:
 
 ```bash
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --check --diff \
-  ansible/playbooks/site.yml --ask-vault-pass -K
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --check --diff   ansible/playbooks/site.yml --ask-vault-pass
 ```
 
-(Identical to the "Run before applying" command in **Required checks** above.)
-
-If the dry run succeeds, omit `--diff` for shorter output, then apply with the `Apply to local VM` command below.
+If the dry run succeeds, apply the playbook to the local VM.
 
 ### Volume ownership note
 
-InvoiceNinja runs as container user `ninja` (`999:999`) and requires write access to its `ninja_storage` named volume at `/app/storage`. The stack role creates the storage volume, initializes Laravel cache/session/view/log directories, and fixes ownership before `docker compose up`. Do not mount `/app/public`; the image ships built public assets there.
-
-No broad ownership fix is applied to database volumes. MariaDB, PostgreSQL, n8n, Dolibarr, and Docuseal use their image defaults unless runtime evidence shows otherwise.
+InvoiceNinja requires writable persistent storage for Laravel cache, sessions, views, and logs. Keep volume ownership and write-permission behavior aligned with the running container image and verify it in the stack role.
 
 ## Required checks
 
@@ -194,6 +173,32 @@ Validate deployment:
 ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook ansible/playbooks/validate.yml --ask-vault-pass
 ```
 
+## Validation expectations
+
+Validation should cover only the active service set:
+
+- InvoiceNinja endpoint (`billing`)
+- Docuseal endpoint (`agreements`)
+- Compose configuration renders successfully
+- Caddy validates and reloads successfully
+- backup workflow covers active persistent data only
+
+## Caddy ownership model
+
+The host-owned `/etc/caddy/Caddyfile` remains the main Caddy entrypoint. This repo renders FK CĒSIS routes to a dedicated snippet file and ensures the main file imports it.
+
+Managed by the playbook:
+
+- `/etc/caddy/football-club-routes.caddy`
+- one `import /etc/caddy/football-club-routes.caddy` line in `/etc/caddy/Caddyfile`
+
+Not replaced by the playbook during normal runs:
+
+- unrelated host-owned Caddy global options
+- unrelated host-owned site blocks already present in `/etc/caddy/Caddyfile`
+
+If the active playbook still contains legacy services during transition, do not treat them as required success criteria for this repo's current scope.
+
 ## Secret rules
 
-Never commit plaintext secrets, vault passwords, generated `.env` files, API tokens, Stripe secrets, WhatsApp tokens, database passwords, or real ID document photos.
+Never commit plaintext secrets, vault passwords, generated `.env` files, API tokens, database passwords, Stripe secrets, Docuseal secrets, or any other live credentials.

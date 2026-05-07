@@ -2,31 +2,32 @@
 
 ## Context
 
-FK CĒSIS needs a repeatable deployment foundation for the hybrid club management platform described in `docs/implementation-plan.md`. The current plan describes manual Docker Compose, Caddy, secrets, and backup steps. The first implementation step will replace those manual host changes with Ansible-managed infrastructure as code while preserving the existing service architecture and phase gates.
+FK CĒSIS needs a repeatable deployment foundation for the active operations environment described in `docs/implementation-plan.md`. The repository scope was narrowed on 2026-05-04 to infrastructure automation and operator documentation for InvoiceNinja, Docuseal, Caddy, and backups only.
+
+The first implementation step remains replacing manual host changes with Ansible-managed infrastructure as code while keeping Docker Compose as the runtime orchestrator.
 
 ## Problem
 
-The platform must be deployable from source-controlled automation before application-specific configuration and workflow automation are added. The deployment must work first against a local Ubuntu LTS VM over SSH, then later against a production Ubuntu LTS host. The production host may already have Caddy running; Ansible will take ownership of the Caddy configuration after backing up the existing file.
+The environment must be deployable from source-controlled automation before later integrations are considered. The deployment must work first against a local Ubuntu LTS VM over SSH, then later against a production-style Ubuntu LTS host. The production host may already have Caddy running; Ansible will take ownership of the Caddy configuration after backing up the existing file.
 
 ## Goals
 
 - Provision an Ubuntu LTS VM over SSH.
 - Install and configure Docker Engine and the Docker Compose plugin.
-- Create `/opt/football-club` and render the platform Compose project there.
+- Create `/opt/football-club` and render the active Compose project there.
 - Render `/opt/football-club/.env` from encrypted Ansible Vault variables only.
 - Install and configure Caddy, with Ansible owning the full Caddyfile.
 - Install the backup script and schedule.
-- Start the stack with Docker Compose.
+- Start the active stack.
 - Verify the stack through mandatory linting, syntax checks, dry run, runtime checks, and HTTP smoke checks.
-- Keep the existing Dolibarr, InvoiceNinja, n8n, Docuseal, DocTR, Stripe, and Caddy architecture intact.
+- Preserve a clean extension point for a future in-house member management service.
 
 ## Non-Goals
 
-- Do not automate member import in this first iteration.
-- Do not automate Stripe verification; it remains a manual Phase 1 gate with a real Latvian bank account.
-- Do not create n8n workflows yet.
-- Do not bootstrap application settings through APIs yet.
-- Do not automate WhatsApp, OCR registration, or agreement flows yet.
+- Do not automate member import.
+- Do not automate Stripe verification or payment acceptance testing.
+- Do not deploy Dolibarr, n8n, or DocTR in the current-scope design.
+- Do not bootstrap future member-system application settings.
 - Do not update `docs/html/implementation-plan.html`; it may remain stale.
 
 ## Recommended Approach
@@ -35,19 +36,19 @@ Use Ansible to provision hosts and render Docker Compose runtime configuration. 
 
 Alternatives considered:
 
-1. Terraform/OpenTofu plus Ansible. This is useful later for cloud infrastructure, DNS, and firewall automation, but it is unnecessary for the current local-VM-first goal.
-2. NixOS or Colmena. This provides stronger reproducibility but adds operational complexity and is a poor fit for club handover.
+1. Terraform/OpenTofu plus Ansible. Useful later for DNS, firewalling, or external infrastructure, but unnecessary for the current host-focused goal.
+2. NixOS or Colmena. Stronger reproducibility, but added operational complexity is a poor fit for club handover.
 
 ## Architecture
 
 ### Deployment Model
 
-The repository becomes the source of truth for deployment automation. Ansible targets environment-specific inventories:
+The repository is the source of truth for deployment automation. Ansible targets environment-specific inventories:
 
-- `local_vm` for the first Ubuntu LTS VM validation target.
-- `production` for the later production host.
+- `local_vm` for the first Ubuntu LTS VM validation target
+- `production` for the later production-style host
 
-Both environments use the same roles and templates. Inventory variables define hostnames, domains, email addresses, paths, and environment-specific behavior.
+Both environments use the same roles and templates. Inventory variables define domains, email addresses, paths, and environment-specific behavior.
 
 ### Runtime Model
 
@@ -61,6 +62,18 @@ Docker Compose runs the application stack. Ansible renders and manages these hos
 
 Ansible starts and restarts the stack through Docker Compose.
 
+### Active Service Set
+
+The active runtime described by this design consists of:
+
+- InvoiceNinja
+- supporting InvoiceNinja runtime services such as MariaDB and Redis
+- Docuseal
+- Caddy
+- backup automation
+
+This design no longer treats Dolibarr, n8n, or DocTR as active-scope services.
+
 ### Secrets Model
 
 Secrets are stored in encrypted Ansible Vault files:
@@ -71,20 +84,23 @@ Secrets are stored in encrypted Ansible Vault files:
 Only encrypted vault files may contain real secrets. Safe examples are committed for operators:
 
 - `vault.example.yml`
-- `.env.example`
+- `.env.example` when needed
 
-Vault password files, generated `.env` files, API keys, database passwords, Stripe secrets, WhatsApp tokens, and real ID document photos must never be committed.
+Vault password files, generated `.env` files, API keys, database passwords, Stripe secrets, and other plaintext secrets must never be committed.
 
 ### Caddy Model
 
 Ansible installs and manages Caddy. On a host where Caddy already exists, the existing main Caddyfile is backed up before Ansible replaces it. The project Caddyfile contains routes for:
 
-- `club.<domain>` to Dolibarr
 - `billing.<domain>` to InvoiceNinja
-- `n8n.<domain>` to n8n
 - `agreements.<domain>` to Docuseal
 
-The local VM smoke test uses real subdomains pointed to the VM.
+The local VM mode uses only:
+
+- `billing.lan`
+- `agreements.lan`
+
+A future member service can be added later through a separate approved change.
 
 ## Proposed Repository Structure
 
@@ -106,6 +122,7 @@ ansible/
       vault.yml
   playbooks/
     site.yml
+    validate.yml
   roles/
     common/
     docker/
@@ -129,7 +146,7 @@ Role responsibilities:
 
 ## Testing and Acceptance Criteria
 
-All of these checks are mandatory for the first Ansible change:
+All of these checks are mandatory for Ansible changes:
 
 1. Static checks:
    - `ansible-lint`
@@ -141,26 +158,25 @@ All of these checks are mandatory for the first Ansible change:
    - full playbook run succeeds.
 4. Runtime checks on the VM:
    - `docker compose -f /opt/football-club/docker-compose.yml config` succeeds.
-   - expected containers are running or healthy where health checks exist.
+   - expected active containers are running or healthy where health checks exist.
    - Caddy validates and reloads successfully.
-   - HTTP smoke checks pass for `club.<domain>`, `billing.<domain>`, `n8n.<domain>`, and `agreements.<domain>`.
+   - HTTP smoke checks pass for `billing` and `agreements` endpoints in the selected routing mode.
 
-Out of scope for this first test cycle:
+Out of scope for this test cycle:
 
-- real Stripe payment verification;
-- member import correctness;
-- n8n workflows;
-- DocTR OCR;
-- WhatsApp messaging.
-
-The existing Phase 1 gate remains unchanged: do not proceed to Phase 2 until Stripe Latvia SEPA and card payments are confirmed with a real bank account.
+- real payment-gateway acceptance verification;
+- future member-system integration;
+- any Dolibarr, n8n, or DocTR behavior.
 
 ## Documentation Updates Required
 
-- Update `docs/implementation-plan.md` so Phase 1 describes Ansible-managed deployment instead of manual host edits.
-- Update `AGENTS.md` so project workflow names Ansible, Ansible Vault, mandatory `ansible-lint`, mandatory `yamllint`, and the stale rendered HTML decision.
+- Keep `docs/implementation-plan.md` aligned with the narrowed service set.
+- Keep `AGENTS.md` aligned with active repo ownership and workflow rules.
+- Keep `ansible/README.md` aligned with the active endpoints, vault workflow, and validation commands.
 - Leave `docs/html/implementation-plan.html` stale unless a separate documentation-rendering task is approved.
 
 ## Approval State
 
-The design was approved by the user on 2026-04-26 with Option A: Ansible-first provisioning and Docker Compose runtime.
+Originally approved on 2026-04-26 for the Ansible-first provisioning approach.
+
+Reinterpreted on 2026-05-04 under the approved scope reduction so it applies only to the active service set in this repository.

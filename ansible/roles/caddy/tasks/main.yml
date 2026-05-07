@@ -33,10 +33,22 @@
   when: caddy_caddyfile_stat.stat.exists
   become: true
 
-- name: Render managed Caddyfile
+- name: Render managed Caddy snippet
   ansible.builtin.template:
     src: "Caddyfile-{{ football_club_caddy_mode }}.j2"
-    dest: "{{ football_club_caddyfile_path }}"
+    dest: "{{ football_club_caddy_snippet_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Reload Caddy
+
+- name: Ensure main Caddyfile imports managed snippet
+  ansible.builtin.lineinfile:
+    path: "{{ football_club_caddyfile_path }}"
+    line: "import {{ football_club_caddy_snippet_path }}"
+    regexp: "^import {{ football_club_caddy_snippet_path | regex_escape }}$"
+    create: true
     owner: root
     group: root
     mode: "0644"

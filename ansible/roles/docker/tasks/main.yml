@@ -2,8 +2,8 @@
 - name: Install Docker packages from Ubuntu repositories
   ansible.builtin.apt:
     name:
-      - docker.io
-      - docker-compose-v2
+      - docker-ce
+      - docker-compose-plugin
     state: present
     update_cache: true
   become: true

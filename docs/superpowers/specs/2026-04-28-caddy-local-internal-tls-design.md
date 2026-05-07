@@ -1,5 +1,7 @@
 # Caddy Local Internal TLS Design
 
+> Historical-only note for current repo work: this entire document is retained only for repo history and is not current guidance, including its local TLS and routing decisions. Use `docs/implementation-plan.md` as the active owner for current repo work, narrowed by `docs/superpowers/specs/2026-05-04-ansible-scope-reduction-design.md`.
+
 ## Context
 
 FK CĒSIS football club platform has two deployment targets:

@@ -10,15 +10,13 @@ mkdir -p "${BACKUP_DIR}"
 
 cd "${PROJECT_DIR}"
 
-${COMPOSE} exec -T dolibarr-db sh -c 'mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" dolibarr' > "${BACKUP_DIR}/dolibarr.sql"
 ${COMPOSE} exec -T ninja-db sh -c 'mysqldump -u root -p"${MYSQL_ROOT_PASSWORD}" ninja' > "${BACKUP_DIR}/ninja.sql"
-${COMPOSE} exec -T n8n-db sh -c 'PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump -U n8n n8n' > "${BACKUP_DIR}/n8n.sql"
 
-docker run --rm -v {{ football_club_compose_project_name }}_dolibarr_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
-  tar czf /backup/dolibarr_documents.tar.gz -C /data .
+docker run --rm -v {{ football_club_compose_project_name }}_app_storage:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/invoiceninja_storage.tar.gz -C /data .
 
-docker run --rm -v {{ football_club_compose_project_name }}_n8n_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
-  tar czf /backup/n8n_workflows.tar.gz -C /data .
+docker run --rm -v {{ football_club_compose_project_name }}_docuseal_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/docuseal_data.tar.gz -C /data .
 
 rsync -az "${BACKUP_DIR}" "{{ football_club_backup_remote }}"
 
