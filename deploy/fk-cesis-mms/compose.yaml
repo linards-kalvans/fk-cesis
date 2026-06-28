@@ -1,0 +1,68 @@
+# fk-cesis-mms — deployed runtime stack
+#
+# Source-of-truth for FK Cēsis MMS server runtime. The app image is built by
+# the fk-cesis-mms application repository and consumed here by tag.
+
+name: fk-cesis-mms
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Postgres 18+ stores data under a version-specific subdirectory here;
+    # mount the parent path so future pg_upgrade --link remains clean.
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: ${FK_CESIS_MMS_IMAGE:-codeberg.org/linards-kalvans/fk-cesis-mms}:${IMAGE_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/private-uploads:/app/private-uploads
+    command:
+      - sh
+      - -c
+      - >
+        python manage.py migrate --noinput &&
+        exec gunicorn fk_cesis_mms.wsgi:application
+        --bind 0.0.0.0:8000
+        --workers 3
+        --access-logfile -
+        --error-logfile -
+
+  qcluster:
+    image: ${FK_CESIS_MMS_IMAGE:-codeberg.org/linards-kalvans/fk-cesis-mms}:${IMAGE_TAG:-dev}
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/private-uploads:/app/private-uploads
+    command: ["python", "manage.py", "qcluster"]
+    healthcheck:
+      disable: true
+
+volumes:
+  pgdata:

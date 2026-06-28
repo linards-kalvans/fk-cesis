@@ -1,0 +1,21 @@
+[Unit]
+Description=fk-cesis-mms deploy webhook listener
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fkmms
+Group=fkmms
+EnvironmentFile=/etc/fk-cesis-mms-deploy-listener.env
+ExecStart=/usr/bin/python3 /opt/fk-cesis-mms/bin/fk-deploy-listener.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/fk-cesis-mms
+
+[Install]
+WantedBy=multi-user.target
