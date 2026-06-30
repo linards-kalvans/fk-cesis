@@ -1,0 +1,216 @@
+---
+- name: Regression test for MMS unified stack integration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  tasks:
+    - name: Read Docker Compose template
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/football_club_stack/templates/docker-compose.yml.j2"
+      register: compose_template
+
+    - name: Read environment template
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/football_club_stack/templates/env.j2"
+      register: env_template
+
+    - name: Read stack defaults
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/football_club_stack/defaults/main.yml"
+      register: stack_defaults
+
+    - name: Read stack tasks
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/football_club_stack/tasks/main.yml"
+      register: stack_tasks
+
+    - name: Read stack handlers
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/football_club_stack/handlers/main.yml"
+      register: stack_handlers
+
+    - name: Read validation playbook
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/playbooks/validate.yml"
+      register: validate_playbook
+
+    - name: Read backup script template
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/backup/templates/backup.sh.j2"
+      register: backup_template
+
+    - name: Read site playbook
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/playbooks/site.yml"
+      register: site_playbook
+
+    - name: Read local VM inventory vars
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/local_vm/group_vars/local_vm/vars.yml"
+      register: local_vm_vars
+
+    - name: Read production inventory vars
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/production/group_vars/production/vars.yml"
+      register: production_vars
+
+    - name: Read local VM vault example
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/local_vm/group_vars/local_vm/vault.example.yml"
+      register: local_vm_vault_example
+
+    - name: Read production vault example
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/inventories/production/group_vars/production/vault.example.yml"
+      register: production_vault_example
+
+    - name: Assert MMS services are in the unified Compose template
+      ansible.builtin.assert:
+        that:
+          - "'mms-postgres:' in (compose_template.content | b64decode)"
+          - "'mms-web:' in (compose_template.content | b64decode)"
+          - "'mms-qcluster:' in (compose_template.content | b64decode)"
+          - "'mms_pgdata:' in (compose_template.content | b64decode)"
+          - "'football_club_stack_mms_host_port' in (compose_template.content | b64decode)"
+          - "'football_club_stack_mms_image' in (compose_template.content | b64decode)"
+          - "'football_club_stack_mms_image_tag' in (compose_template.content | b64decode)"
+          - "'DATABASE_URL: ${MMS_DATABASE_URL}' in (compose_template.content | b64decode)"
+          - "'DOCUSEAL_API_URL: ${MMS_DOCUSEAL_API_URL}' in (compose_template.content | b64decode)"
+          - "'INVOICE_NINJA_API_URL: ${MMS_INVOICE_NINJA_API_URL}' in (compose_template.content | b64decode)"
+          - "'CSRF_TRUSTED_ORIGINS: ${MMS_CSRF_TRUSTED_ORIGINS}' in (compose_template.content | b64decode)"
+          - >-
+            'ADDRESS_AUTOCOMPLETE_REGION_CODES: ${MMS_ADDRESS_AUTOCOMPLETE_REGION_CODES}'
+            in (compose_template.content | b64decode)
+
+    - name: Assert MMS environment is rendered from Ansible and Vault values
+      ansible.builtin.assert:
+        that:
+          - "'MMS_DATABASE_URL=postgres://' in (env_template.content | b64decode)"
+          - "'mms-postgres:5432' in (env_template.content | b64decode)"
+          - "'vault_mms_postgres_password' in (env_template.content | b64decode)"
+          - "'MMS_DJANGO_SECRET_KEY=' in (env_template.content | b64decode)"
+          - "'vault_mms_django_secret_key' in (env_template.content | b64decode)"
+          - "'MMS_SITE_URL=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_site_url' in (env_template.content | b64decode)"
+          - "'MMS_DJANGO_ALLOWED_HOSTS=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_allowed_hosts' in (env_template.content | b64decode)"
+          - "'MMS_AGREEMENT_PROVIDER_MODE=docuseal' in (env_template.content | b64decode)"
+          - "'MMS_INVOICE_PROVIDER_MODE=invoiceninja' in (env_template.content | b64decode)"
+          - "'MMS_DOCUSEAL_API_URL=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_docuseal_api_url' in (env_template.content | b64decode)"
+          - "'MMS_INVOICE_NINJA_API_URL=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_invoice_ninja_api_url' in (env_template.content | b64decode)"
+          - "'MMS_CSRF_TRUSTED_ORIGINS=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_csrf_trusted_origins' in (env_template.content | b64decode)"
+          - "'MMS_ADDRESS_AUTOCOMPLETE_REGION_CODES=' in (env_template.content | b64decode)"
+          - "'football_club_stack_mms_address_autocomplete_region_codes' in (env_template.content | b64decode)"
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('football_club_stack_mms_docuseal_api_url: "http://docuseal:3000"')
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('football_club_stack_mms_invoice_ninja_api_url: "http://nginx"')
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('football_club_stack_mms_host_port: "8019"')
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('football_club_stack_mms_csrf_trusted_origins')
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('football_club_stack_mms_address_autocomplete_region_codes')
+          - >-
+            (stack_defaults.content | b64decode)
+            is search('100016487,100015774,100016124,100016085,100015637')
+
+    - name: Assert MMS validation endpoint is checked
+      ansible.builtin.assert:
+        that:
+          - "'members_endpoint' in (validate_playbook.content | b64decode)"
+          - "'https://members.lan/healthz' in (validate_playbook.content | b64decode)"
+          - "'https://members.' in (validate_playbook.content | b64decode)"
+          - "'Check MMS HTTP endpoint' in (validate_playbook.content | b64decode)"
+
+    - name: Assert MMS backup data is covered
+      ansible.builtin.assert:
+        that:
+          - "'mms-postgres' in (backup_template.content | b64decode)"
+          - "'mms.sql' in (backup_template.content | b64decode)"
+          - "'mms_uploads.tar.gz' in (backup_template.content | b64decode)"
+          - "'mms_private_uploads.tar.gz' in (backup_template.content | b64decode)"
+
+    - name: Assert inventory vars set manage_caddy and host port
+      ansible.builtin.assert:
+        that:
+          - >-
+            (local_vm_vars.content | b64decode)
+            is search('football_club_manage_caddy: false')
+          - >-
+            (local_vm_vars.content | b64decode)
+            is search('football_club_stack_mms_host_port: "8019"')
+          - >-
+            (production_vars.content | b64decode)
+            is search('football_club_manage_caddy: false')
+          - >-
+            (production_vars.content | b64decode)
+            is search('football_club_stack_mms_host_port: "8019"')
+
+    - name: Assert site playbook gates caddy role on football_club_manage_caddy
+      ansible.builtin.assert:
+        that:
+          - "'football_club_manage_caddy' in (site_playbook.content | b64decode)"
+          - "'default(true)' in (site_playbook.content | b64decode)"
+
+    - name: Assert MMS image tags are inventory-specific
+      ansible.builtin.assert:
+        that:
+          - "'football_club_stack_mms_image_tag: \"dev\"' in (local_vm_vars.content | b64decode)"
+          - "'football_club_stack_mms_image_tag: \"main\"' in (production_vars.content | b64decode)"
+
+    - name: Assert MMS Vault placeholders exist in both example inventories
+      ansible.builtin.assert:
+        that:
+          - "'vault_mms_django_secret_key' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_postgres_password' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_ocr_encryption_key' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_api_key' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_template_id' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_webhook_secret' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_invoice_ninja_api_key' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_email_host_password' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_superuser_password' in (local_vm_vault_example.content | b64decode)"
+          - "'vault_mms_django_secret_key' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_postgres_password' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_ocr_encryption_key' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_api_key' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_template_id' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_docuseal_webhook_secret' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_invoice_ninja_api_key' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_email_host_password' in (production_vault_example.content | b64decode)"
+          - "'vault_mms_superuser_password' in (production_vault_example.content | b64decode)"
+
+    - name: Assert mms-qcluster healthcheck is disabled in Compose template
+      ansible.builtin.assert:
+        that:
+          - "'mms-qcluster:' in (compose_template.content | b64decode)"
+          - "'healthcheck:' in (compose_template.content | b64decode)"
+          - "'disable: true' in (compose_template.content | b64decode)"
+
+    - name: Assert stack role pulls MMS images before compose up
+      ansible.builtin.assert:
+        that:
+          - "'Pull MMS images' in (stack_tasks.content | b64decode)"
+          - "'pull mms-web mms-qcluster' in (stack_tasks.content | b64decode)"
+          - "'football_club_stack_mms_pull_result' in (stack_tasks.content | b64decode)"
+
+    - name: Assert stack role notifies handler to restart nginx after compose up
+      ansible.builtin.assert:
+        that:
+          - "'notify: Restart nginx after stack update' in (stack_tasks.content | b64decode)"
+          - "'Restart nginx after stack update' in (stack_handlers.content | b64decode)"
+          - "'restart nginx' in (stack_handlers.content | b64decode)"
+          - "'football_club_stack_nginx_restart_result' in (stack_handlers.content | b64decode)"

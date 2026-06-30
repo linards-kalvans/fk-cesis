@@ -18,6 +18,14 @@ docker run --rm -v {{ football_club_compose_project_name }}_app_storage:/data:ro
 docker run --rm -v {{ football_club_compose_project_name }}_docuseal_data:/data:ro -v "${BACKUP_DIR}":/backup alpine \
   tar czf /backup/docuseal_data.tar.gz -C /data .
 
+${COMPOSE} exec -T mms-postgres sh -c 'pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}"' > "${BACKUP_DIR}/mms.sql"
+
+docker run --rm -v {{ football_club_compose_project_name }}_mms_uploads:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/mms_uploads.tar.gz -C /data .
+
+docker run --rm -v {{ football_club_compose_project_name }}_mms_private_uploads:/data:ro -v "${BACKUP_DIR}":/backup alpine \
+  tar czf /backup/mms_private_uploads.tar.gz -C /data .
+
 rsync -az "${BACKUP_DIR}" "{{ football_club_backup_remote }}"
 
 find "{{ football_club_backup_dir }}" -maxdepth 1 -mtime +30 -type d -exec rm -rf {} +

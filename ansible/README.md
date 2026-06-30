@@ -1,6 +1,6 @@
 # FK CĒSIS Ansible Deployment
 
-This directory deploys the current FK CĒSIS environment foundation: InvoiceNinja, Docuseal, Caddy, and backup automation.
+This directory deploys the current FK CĒSIS environment foundation: InvoiceNinja, Docuseal, FK Cēsis MMS, Caddy, and backup automation.
 
 ## Requirements
 
@@ -61,12 +61,14 @@ For `subdomain` mode, create A records for the active public endpoints:
 |---|---|
 | `billing.<domain>` | InvoiceNinja |
 | `agreements.<domain>` | Docuseal |
+| `members.<domain>` | FK Cēsis MMS |
 
 Example for `example.lv`:
 
 ```text
 billing.example.lv    -> 192.0.2.10
 agreements.example.lv -> 192.0.2.10
+members.example.lv    -> 192.0.2.10
 ```
 
 For `local` mode (`.lan` hostnames with internal TLS), add host entries on every client machine that will access the VM, then import Caddy's root CA certificate so browsers trust the self-signed HTTPS.
@@ -75,7 +77,7 @@ For `local` mode (`.lan` hostnames with internal TLS), add host entries on every
 
 ```bash
 sudo tee -a /etc/hosts <<'HOSTS_EOF'
-192.168.x.x billing.lan agreements.lan
+192.168.x.x billing.lan agreements.lan members.lan
 HOSTS_EOF
 ```
 
@@ -179,13 +181,15 @@ Validation should cover only the active service set:
 
 - InvoiceNinja endpoint (`billing`)
 - Docuseal endpoint (`agreements`)
+- FK Cēsis MMS endpoint (`members`)
 - Compose configuration renders successfully
-- Caddy validates and reloads successfully
-- backup workflow covers active persistent data only
+- Caddy validates and reloads successfully (when `football_club_manage_caddy` is `true`)
+- `validate.yml` route checks depend on an external Caddy route being present when this repo does not manage Caddy
+- backup workflow covers active persistent data for InvoiceNinja, Docuseal, and MMS
 
 ## Caddy ownership model
 
-The host-owned `/etc/caddy/Caddyfile` remains the main Caddy entrypoint. This repo renders FK CĒSIS routes to a dedicated snippet file and ensures the main file imports it.
+The host-owned `/etc/caddy/Caddyfile` remains the main Caddy entrypoint. This repo renders FK CĒSIS routes to a dedicated snippet file and ensures the main file imports it when `football_club_manage_caddy` is `true` (default).
 
 Managed by the playbook:
 

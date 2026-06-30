@@ -1,20 +1,20 @@
 # Project Overview
 
-Ansible deployment and operations documentation repo for FK CĒSIS. The repo is used to keep the club environment repeatable across local VM and future production-style hosts. Application/product development for the future in-house member management system will happen in a separate project until an approved integration scope is added here.
+Ansible deployment and operations documentation repo for FK CĒSIS. The repo is used to keep the club environment repeatable across local VM and future production-style hosts. Application/product development for the future in-house member management system will happen in a separate project; FK Cēsis MMS deployment integration is in scope here.
 
 ## Scope
 
-- Maintain repeatable Ansible deployment for InvoiceNinja, Docuseal, Caddy, and backup automation.
+- Maintain repeatable Ansible deployment for InvoiceNinja, Docuseal, FK Cēsis MMS, optional Caddy, and backup automation.
 - Keep deployment docs, operator workflows, and secret-handling guidance aligned with the active stack.
-- Preserve room to add the future in-house member management system later, but do not define or implement it in this repo yet.
+- Keep FK Cēsis MMS deployment integrated in the active Ansible stack; application development remains in the separate MMS project.
 - Do not treat Dolibarr, n8n, or DocTR as current-scope services in this repository.
 
 ## Milestones
 
 - Milestone 1: narrow source-of-truth docs to the active deployment scope.
-- Milestone 2: keep local VM and production-style deployment repeatable for InvoiceNinja, Docuseal, Caddy, and backups.
+- Milestone 2: keep local VM and production-style deployment repeatable for InvoiceNinja, Docuseal, FK Cēsis MMS, Caddy, and backups.
 - Milestone 3: document validated operator workflows for secrets, deploy, smoke checks, and recovery.
-- Milestone 4: add the future in-house member management system only after a separate approved spec and plan exist.
+- Milestone 4: add the future in-house member management system only after a separate approved spec and plan exist; keep FK Cēsis MMS deployment integrated in the meantime.
 
 ## Specs
 
@@ -37,6 +37,7 @@ Ansible deployment and operations documentation repo for FK CĒSIS. The repo is 
 - Docker Compose remains the runtime orchestrator.
 - InvoiceNinja: `invoiceninja/invoiceninja-octane:latest` with MariaDB.
 - Docuseal: `docuseal/docuseal:latest` with SQLite volume.
+- FK Cēsis MMS: `codeberg.org/linards-kalvans/fk-cesis-mms:<tag>` with PostgreSQL.
 - Caddy provides reverse proxy and TLS termination.
 - Ansible-managed club routes should live in a dedicated Caddy snippet imported from the host's main Caddyfile, not by replacing the whole main file.
 - Ansible Vault is required for committed encrypted secrets.

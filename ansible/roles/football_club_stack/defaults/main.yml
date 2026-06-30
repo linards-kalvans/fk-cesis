@@ -1,3 +1,34 @@
 ---
 football_club_stack_invoiceninja_app_url: >-
   {{ 'http://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
+football_club_stack_mms_image: "codeberg.org/linards-kalvans/fk-cesis-mms"
+football_club_stack_mms_image_tag: "main"
+football_club_stack_mms_host_port: "8019"
+football_club_stack_mms_db_name: "fkmms"
+football_club_stack_mms_db_user: "fkmms"
+football_club_stack_mms_site_url: >-
+  {{ 'https://members.lan' if football_club_caddy_mode == 'local' else 'https://members.' ~ football_club_domain }}
+football_club_stack_mms_allowed_hosts: >-
+  {{ 'members.lan' if football_club_caddy_mode == 'local' else 'members.' ~ football_club_domain }}
+football_club_stack_mms_csrf_trusted_origins: >-
+  {{ 'https://members.lan' if football_club_caddy_mode == 'local' else 'https://members.' ~ football_club_domain }}
+football_club_stack_mms_address_autocomplete_region_codes: "100016487,100015774,100016124,100016085,100015637"
+football_club_stack_mms_docuseal_api_url: "http://docuseal:3000"
+football_club_stack_mms_invoice_ninja_api_url: "http://nginx"
+football_club_stack_mms_invoice_ninja_number_prefix: "MMS"
+football_club_stack_mms_billing_autosend_enabled: "false"
+football_club_stack_mms_billing_send_due_hour: "4"
+football_club_stack_mms_billing_payment_sync_hour: "3"
+football_club_stack_mms_ocr_provider_mode: "stub"
+football_club_stack_mms_tiny_idp_api_url: "https://api.tiny-idp.com/api/extractors/run/6a1026aacf9d0065300ef271"
+football_club_stack_mms_email_backend: "django.core.mail.backends.smtp.EmailBackend"
+football_club_stack_mms_email_host: "smtp.gmail.com"
+football_club_stack_mms_email_port: "587"
+football_club_stack_mms_email_use_tls: "true"
+football_club_stack_mms_email_host_user: ""
+football_club_stack_mms_default_from_email: >-
+  {{ 'noreply@' ~ football_club_domain }}
+football_club_stack_mms_superuser_email: ""
+football_club_stack_mms_superuser_username: ""
+football_club_stack_mms_audit_retention_days: "730"
+football_club_stack_mms_audit_prune_hour: "2"

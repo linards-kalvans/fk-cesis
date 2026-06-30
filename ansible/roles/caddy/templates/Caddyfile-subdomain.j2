@@ -5,3 +5,7 @@ billing.{{ football_club_domain }} {
 agreements.{{ football_club_domain }} {
   reverse_proxy 127.0.0.1:3039
 }
+
+members.{{ football_club_domain }} {
+  reverse_proxy 127.0.0.1:{{ football_club_stack_mms_host_port }}
+}

@@ -1,0 +1,11 @@
+---
+- name: Restart nginx after stack update
+  ansible.builtin.command:
+    cmd: >
+      docker compose -p {{ football_club_compose_project_name }}
+      -f {{ football_club_project_dir }}/docker-compose.yml
+      --env-file {{ football_club_project_dir }}/.env restart nginx
+  register: football_club_stack_nginx_restart_result
+  changed_when: >
+    'Restarting' in football_club_stack_nginx_restart_result.stderr or
+    'Started' in football_club_stack_nginx_restart_result.stderr

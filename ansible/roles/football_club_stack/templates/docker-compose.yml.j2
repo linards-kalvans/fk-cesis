@@ -106,9 +106,136 @@ services:
     volumes:
       - docuseal_data:/data
 
+  mms-postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${MMS_POSTGRES_DB}
+      POSTGRES_USER: ${MMS_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${MMS_POSTGRES_PASSWORD}
+    volumes:
+      - mms_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MMS_POSTGRES_USER} -d ${MMS_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mms-web:
+    image: {{ football_club_stack_mms_image }}:{{ football_club_stack_mms_image_tag }}
+    restart: unless-stopped
+    depends_on:
+      mms-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${MMS_DATABASE_URL}
+      DJANGO_SECRET_KEY: ${MMS_DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${MMS_DJANGO_DEBUG}
+      SITE_URL: ${MMS_SITE_URL}
+      DJANGO_ALLOWED_HOSTS: ${MMS_DJANGO_ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${MMS_CSRF_TRUSTED_ORIGINS}
+      ADDRESS_AUTOCOMPLETE_REGION_CODES: ${MMS_ADDRESS_AUTOCOMPLETE_REGION_CODES}
+      TIME_ZONE: ${MMS_TIME_ZONE}
+      OCR_PROVIDER_MODE: ${MMS_OCR_PROVIDER_MODE}
+      TINY_IDP_API_URL: ${MMS_TINY_IDP_API_URL}
+      TINY_IDP_API_KEY: ${MMS_TINY_IDP_API_KEY}
+      OCR_ENCRYPTION_KEY: ${MMS_OCR_ENCRYPTION_KEY}
+      AGREEMENT_PROVIDER_MODE: ${MMS_AGREEMENT_PROVIDER_MODE}
+      DOCUSEAL_API_URL: ${MMS_DOCUSEAL_API_URL}
+      DOCUSEAL_API_KEY: ${MMS_DOCUSEAL_API_KEY}
+      DOCUSEAL_TEMPLATE_ID: ${MMS_DOCUSEAL_TEMPLATE_ID}
+      DOCUSEAL_WEBHOOK_SECRET: ${MMS_DOCUSEAL_WEBHOOK_SECRET}
+      INVOICE_PROVIDER_MODE: ${MMS_INVOICE_PROVIDER_MODE}
+      INVOICE_NINJA_API_URL: ${MMS_INVOICE_NINJA_API_URL}
+      INVOICE_NINJA_API_KEY: ${MMS_INVOICE_NINJA_API_KEY}
+      INVOICE_NINJA_NUMBER_PREFIX: ${MMS_INVOICE_NINJA_NUMBER_PREFIX}
+      BILLING_AUTOSEND_ENABLED: ${MMS_BILLING_AUTOSEND_ENABLED}
+      BILLING_SEND_DUE_HOUR: ${MMS_BILLING_SEND_DUE_HOUR}
+      BILLING_PAYMENT_SYNC_HOUR: ${MMS_BILLING_PAYMENT_SYNC_HOUR}
+      EMAIL_BACKEND: ${MMS_EMAIL_BACKEND}
+      EMAIL_HOST: ${MMS_EMAIL_HOST}
+      EMAIL_PORT: ${MMS_EMAIL_PORT}
+      EMAIL_USE_TLS: ${MMS_EMAIL_USE_TLS}
+      EMAIL_HOST_USER: ${MMS_EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${MMS_EMAIL_HOST_PASSWORD}
+      DEFAULT_FROM_EMAIL: ${MMS_DEFAULT_FROM_EMAIL}
+      DJANGO_SUPERUSER_EMAIL: ${MMS_DJANGO_SUPERUSER_EMAIL}
+      DJANGO_SUPERUSER_USERNAME: ${MMS_DJANGO_SUPERUSER_USERNAME}
+      DJANGO_SUPERUSER_PASSWORD: ${MMS_DJANGO_SUPERUSER_PASSWORD}
+      AUDIT_RETENTION_DAYS: ${MMS_AUDIT_RETENTION_DAYS}
+      AUDIT_PRUNE_HOUR: ${MMS_AUDIT_PRUNE_HOUR}
+    ports:
+      - "127.0.0.1:{{ football_club_stack_mms_host_port }}:8000"
+    volumes:
+      - mms_uploads:/app/uploads
+      - mms_private_uploads:/app/private-uploads
+    command:
+      - sh
+      - -c
+      - >
+        python manage.py migrate --noinput &&
+        exec gunicorn fk_cesis_mms.wsgi:application
+        --bind 0.0.0.0:8000
+        --workers 3
+        --access-logfile -
+        --error-logfile -
+
+  mms-qcluster:
+    image: {{ football_club_stack_mms_image }}:{{ football_club_stack_mms_image_tag }}
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    depends_on:
+      mms-web:
+        condition: service_started
+    environment:
+      DATABASE_URL: ${MMS_DATABASE_URL}
+      DJANGO_SECRET_KEY: ${MMS_DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${MMS_DJANGO_DEBUG}
+      SITE_URL: ${MMS_SITE_URL}
+      DJANGO_ALLOWED_HOSTS: ${MMS_DJANGO_ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${MMS_CSRF_TRUSTED_ORIGINS}
+      ADDRESS_AUTOCOMPLETE_REGION_CODES: ${MMS_ADDRESS_AUTOCOMPLETE_REGION_CODES}
+      TIME_ZONE: ${MMS_TIME_ZONE}
+      OCR_PROVIDER_MODE: ${MMS_OCR_PROVIDER_MODE}
+      TINY_IDP_API_URL: ${MMS_TINY_IDP_API_URL}
+      TINY_IDP_API_KEY: ${MMS_TINY_IDP_API_KEY}
+      OCR_ENCRYPTION_KEY: ${MMS_OCR_ENCRYPTION_KEY}
+      AGREEMENT_PROVIDER_MODE: ${MMS_AGREEMENT_PROVIDER_MODE}
+      DOCUSEAL_API_URL: ${MMS_DOCUSEAL_API_URL}
+      DOCUSEAL_API_KEY: ${MMS_DOCUSEAL_API_KEY}
+      DOCUSEAL_TEMPLATE_ID: ${MMS_DOCUSEAL_TEMPLATE_ID}
+      DOCUSEAL_WEBHOOK_SECRET: ${MMS_DOCUSEAL_WEBHOOK_SECRET}
+      INVOICE_PROVIDER_MODE: ${MMS_INVOICE_PROVIDER_MODE}
+      INVOICE_NINJA_API_URL: ${MMS_INVOICE_NINJA_API_URL}
+      INVOICE_NINJA_API_KEY: ${MMS_INVOICE_NINJA_API_KEY}
+      INVOICE_NINJA_NUMBER_PREFIX: ${MMS_INVOICE_NINJA_NUMBER_PREFIX}
+      BILLING_AUTOSEND_ENABLED: ${MMS_BILLING_AUTOSEND_ENABLED}
+      BILLING_SEND_DUE_HOUR: ${MMS_BILLING_SEND_DUE_HOUR}
+      BILLING_PAYMENT_SYNC_HOUR: ${MMS_BILLING_PAYMENT_SYNC_HOUR}
+      EMAIL_BACKEND: ${MMS_EMAIL_BACKEND}
+      EMAIL_HOST: ${MMS_EMAIL_HOST}
+      EMAIL_PORT: ${MMS_EMAIL_PORT}
+      EMAIL_USE_TLS: ${MMS_EMAIL_USE_TLS}
+      EMAIL_HOST_USER: ${MMS_EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${MMS_EMAIL_HOST_PASSWORD}
+      DEFAULT_FROM_EMAIL: ${MMS_DEFAULT_FROM_EMAIL}
+      DJANGO_SUPERUSER_EMAIL: ${MMS_DJANGO_SUPERUSER_EMAIL}
+      DJANGO_SUPERUSER_USERNAME: ${MMS_DJANGO_SUPERUSER_USERNAME}
+      DJANGO_SUPERUSER_PASSWORD: ${MMS_DJANGO_SUPERUSER_PASSWORD}
+      AUDIT_RETENTION_DAYS: ${MMS_AUDIT_RETENTION_DAYS}
+      AUDIT_PRUNE_HOUR: ${MMS_AUDIT_PRUNE_HOUR}
+    volumes:
+      - mms_uploads:/app/uploads
+      - mms_private_uploads:/app/private-uploads
+    command: ["python", "manage.py", "qcluster"]
+
 volumes:
   app_public:
   app_storage:
   redis_data:
   ninja_db_data:
   docuseal_data:
+  mms_pgdata:
+  mms_uploads:
+  mms_private_uploads:

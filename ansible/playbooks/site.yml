@@ -8,4 +8,5 @@
     - role: docker
     - role: football_club_stack
     - role: caddy
+      when: football_club_manage_caddy | default(true) | bool
     - role: backup

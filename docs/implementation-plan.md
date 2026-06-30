@@ -8,6 +8,7 @@ Current active scope is limited to:
 
 - InvoiceNinja for billing and payment operations
 - Docuseal for document signing workflows
+- FK Cēsis MMS for member management deployment integration
 - Caddy for ingress and TLS termination
 - backup automation for active service data
 
@@ -28,7 +29,8 @@ This repository does not currently own member management application development
 |---|---|---|
 | **InvoiceNinja** | Billing, invoices, payment tracking | `invoiceninja/invoiceninja-octane:latest` |
 | **Docuseal** | Agreement/document signing | `docuseal/docuseal:latest` |
-| **Caddy** | Reverse proxy and TLS termination | Host package / managed config |
+| **FK Cēsis MMS** | Member management deployment integration | `codeberg.org/linards-kalvans/fk-cesis-mms:<tag>` |
+| **Caddy** | Reverse proxy and TLS termination (optional per host) | Host package / managed config |
 
 InvoiceNinja requires MariaDB and Redis as supporting runtime services inside the Compose project.
 
@@ -92,15 +94,19 @@ Caddy routing mode is controlled by the `football_club_caddy_mode` inventory var
 - `subdomain` — production-style routing with ACME TLS
 - `local` — `.lan` hostnames with Caddy internal TLS
 
+The `caddy` role can be skipped by setting `football_club_manage_caddy: false` (for example, when a separate security playbook owns the VPS Caddyfile). MMS binds to `127.0.0.1:{{ football_club_stack_mms_host_port }}` with a default host port of `8019`.
+
 ### Production-style hostnames
 
 - `billing.<domain>` → InvoiceNinja
 - `agreements.<domain>` → Docuseal
+- `members.<domain>` → FK Cēsis MMS
 
 ### Local hostnames
 
 - `billing.lan` → InvoiceNinja
 - `agreements.lan` → Docuseal
+- `members.lan` → FK Cēsis MMS
 
 The future in-house member management system does not have an assigned hostname in this repo yet.
 
@@ -111,6 +117,8 @@ Backup automation should cover only active persistent data:
 - InvoiceNinja database dump
 - InvoiceNinja persistent storage volume(s)
 - Docuseal persistent data volume
+- FK Cēsis MMS database dump
+- FK Cēsis MMS uploads and private uploads volumes
 
 If Caddy-managed certificates or supporting runtime state require explicit backup in a future iteration, add that through a separate approved change.
 
@@ -134,7 +142,7 @@ Current-scope validation should confirm only active services.
 - `docker compose -f /opt/football-club/docker-compose.yml config` succeeds
 - expected active containers are running
 - Caddy validates and reloads successfully
-- HTTP smoke checks pass for `billing` and `agreements` endpoints in the selected routing mode
+- HTTP smoke checks pass for `billing`, `agreements`, and `members` endpoints in the selected routing mode
 
 ### Manual recovery expectation
 
@@ -144,6 +152,7 @@ Until restore automation exists, the operator should be able to:
 - restore InvoiceNinja database data into a temporary test environment or documented restore path
 - restore InvoiceNinja persistent storage
 - restore Docuseal persistent data
+- restore FK Cēsis MMS database data and upload volumes into a documented restore path
 
 ## Out of Scope
 

@@ -10,3 +10,6 @@ football_club_caddy_snippet_path: "/etc/caddy/football-club-routes.caddy"
 football_club_caddy_backup_dir: "/etc/caddy/backups"
 football_club_compose_project_name: "football-club"
 football_club_caddy_mode: "subdomain"
+football_club_stack_mms_image_tag: "main"
+football_club_manage_caddy: false
+football_club_stack_mms_host_port: "8019"

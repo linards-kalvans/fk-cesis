@@ -77,6 +77,18 @@
       && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
   changed_when: false
 
+- name: Pull MMS images
+  ansible.builtin.command:
+    cmd: >
+      docker compose -p {{ football_club_compose_project_name }}
+      -f {{ football_club_project_dir }}/docker-compose.yml
+      --env-file {{ football_club_project_dir }}/.env pull mms-web mms-qcluster
+  register: football_club_stack_mms_pull_result
+  changed_when: >
+    'Downloaded newer image' in football_club_stack_mms_pull_result.stderr or
+    'Pull complete' in football_club_stack_mms_pull_result.stderr or
+    'Pulling' in football_club_stack_mms_pull_result.stderr
+
 - name: Start football club stack
   ansible.builtin.command:
     cmd: >
@@ -89,3 +101,4 @@
     'Created' in football_club_stack_compose_up_result.stderr or
     'Recreated' in football_club_stack_compose_up_result.stderr
   no_log: false
+  notify: Restart nginx after stack update
