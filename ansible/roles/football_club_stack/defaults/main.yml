@@ -1,8 +1,9 @@
 ---
 football_club_stack_invoiceninja_app_url: >-
   {{ 'http://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
-# Production keeps the original upstream reference. Inventories may override
-# this with a locally loaded, fully qualified sha256 image ID.
+# Upstream fallback for inventories that do not pin a verified image. Both the
+# local VM and production inventories override this with their own accepted,
+# fully qualified sha256 image ID.
 football_club_stack_invoiceninja_image: "invoiceninja/invoiceninja-debian:latest"
 football_club_stack_mms_image: "codeberg.org/linards-kalvans/fk-cesis-mms"
 football_club_stack_mms_image_tag: "main"
