@@ -10,7 +10,7 @@ Current active scope is limited to:
 - Docuseal for document signing workflows
 - FK Cēsis MMS for member management deployment integration
 - Caddy for ingress and TLS termination
-- backup automation for active service data
+- deployment recovery checkpoints for active service data; routine daily backups are handled by the separate `server-backups` project
 
 This repository does not currently own member management application development. The future in-house member management system will be built in a separate project and may be integrated into this deployment stack later through a separate approved spec and implementation plan.
 
@@ -20,16 +20,16 @@ This repository does not currently own member management application development
 - Docker Compose remains the runtime orchestrator.
 - Secrets are sourced from Ansible Vault only and rendered onto the target host.
 - Caddy owns inbound routing and TLS termination for the active services.
-- Backups cover active persistent data only.
+- Deployment checkpoints cover active persistent data only. Routine daily/offsite backup work is deferred to `server-backups` per user direction (2026-10-29).
 - Do not plan around Dolibarr, n8n, or DocTR in this repository's current scope.
 
 ## Managed Runtime
 
 | Service | Role | Image |
 |---|---|---|
-| **InvoiceNinja** | Billing, invoices, payment tracking | `invoiceninja/invoiceninja-octane:latest` |
+| **InvoiceNinja** | Billing, invoices, payment tracking | Debian PHP-FPM hotpatch image selected by the active inventory; see `docs/invoiceninja-php-security-hotpatch.md` |
 | **Docuseal** | Agreement/document signing | `docuseal/docuseal:latest` |
-| **FK Cēsis MMS** | Member management deployment integration | `codeberg.org/linards-kalvans/fk-cesis-mms:<tag>` |
+| **FK Cēsis MMS** | Member management deployment integration | Repository/tag selected by role defaults and inventory overrides; do not restore historical Codeberg references |
 | **Caddy** | Reverse proxy and TLS termination (optional per host) | Host package / managed config |
 
 InvoiceNinja requires MariaDB and Redis as supporting runtime services inside the Compose project.
@@ -54,7 +54,7 @@ InvoiceNinja requires MariaDB and Redis as supporting runtime services inside th
 
 - Run mandatory Ansible lint and syntax checks.
 - Validate the deployed active endpoints.
-- Verify backup generation for active service data.
+- Verify one-off deployment checkpoints and recovery; coordinate routine daily backup coverage with `server-backups`.
 - Document operator recovery steps until executable restore tests exist.
 
 ### Milestone 4 — Future Member System Integration Readiness
@@ -64,13 +64,18 @@ InvoiceNinja requires MariaDB and Redis as supporting runtime services inside th
 
 ## Ansible Deployment Foundation
 
-The deployment foundation targets a local Ubuntu LTS VM first and a production-style Ubuntu LTS host later. Ansible owns these host artifacts:
+The deployment foundation is validated on the Ubuntu LTS VM. Production is Debian 13; the scoped proxy rollout is documented separately and is not proof that every Ubuntu-oriented host role is compatible. Ansible manages these host artifacts when their roles are enabled:
 
 - `/opt/football-club/docker-compose.yml`
 - `/opt/football-club/.env`
 - `/etc/caddy/football-club-routes.caddy`
-- `/opt/football-club/backup.sh`
-- backup cron schedule
+- `/opt/football-club/backup.sh` (retained legacy role; routine daily work deferred)
+- backup cron schedule (retained legacy role; routine daily work deferred)
+
+Routine daily backups are handled by `server-backups`. This deferral does not
+decommission the existing role or cron; coordinate any removal/disablement as
+a separately approved deployment, rather than changing production in this
+documentation update.
 
 The main `/etc/caddy/Caddyfile` remains the host-owned entrypoint. The playbook preserves that file and ensures it imports the FK CĒSIS-managed snippet.
 
@@ -112,7 +117,10 @@ The future in-house member management system does not have an assigned hostname 
 
 ## Backup Scope
 
-Backup automation should cover only active persistent data:
+Routine daily/offsite backup automation is deferred to `server-backups`. The
+following active-data scope remains relevant to deployment recovery checkpoints
+and coordination with that owner; it is not a daily-backup implementation task
+for this repository:
 
 - InvoiceNinja database dump
 - InvoiceNinja persistent storage volume(s)

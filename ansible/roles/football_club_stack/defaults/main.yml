@@ -1,11 +1,14 @@
 ---
 football_club_stack_invoiceninja_app_url: >-
   {{ 'http://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
+football_club_stack_invoiceninja_app_debug: "false"
+# Image refresh is an explicit maintenance operation, not a deployment side effect.
+football_club_stack_pull_mms_images: false
 # Upstream fallback for inventories that do not pin a verified image. Both the
 # local VM and production inventories override this with their own accepted,
 # fully qualified sha256 image ID.
 football_club_stack_invoiceninja_image: "invoiceninja/invoiceninja-debian:latest"
-football_club_stack_mms_image: "codeberg.org/linards-kalvans/fk-cesis-mms"
+football_club_stack_mms_image: "ghcr.io/linards-kalvans/fk-cesis-mms"
 football_club_stack_mms_image_tag: "main"
 football_club_stack_mms_host_port: "8019"
 football_club_stack_mms_db_name: "fkmms"

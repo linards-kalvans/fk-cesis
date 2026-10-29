@@ -1,0 +1,68 @@
+---
+name: Deployment security
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Optional registry image@sha256 digest to scan (not deploy)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install distribution validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible ansible-lint yamllint python3-jinja2 python3-yaml
+          docker compose version
+      - name: Render and validate both inventories without secrets
+        run: |
+          /usr/bin/python3 -m unittest discover -s tests -p test_deployment_security.py -v
+          /usr/bin/python3 -m unittest discover -s tests -p test_invoiceninja_vm_hotpatch.py -v
+      - name: YAML validation
+        run: yamllint ansible .github/workflows/security.yml
+      - name: Ansible lint and syntax (no host connection or Vault password)
+        working-directory: ansible
+        run: |
+          ansible-lint roles playbooks tests
+          ansible-playbook --syntax-check playbooks/site.yml
+          ansible-playbook --syntax-check playbooks/validate.yml
+      - name: Secret scan of current tree (redacted, no Vault decryption)
+        run: >-
+          docker run --rm --network none -v "$PWD:/repo:ro"
+          ghcr.io/gitleaks/gitleaks@sha256:105ac66a57b2bb8afb61a3b8a5dcc4817773d03724a7e8a515214cfe58225556
+          dir /repo --redact --no-banner
+      - name: Report dependency and infrastructure findings
+        # Vulnerabilities are triaged, not blanket-suppressed. Operational scanner
+        # failures still fail the step; --exit-code 0 applies only to findings.
+        run: >-
+          docker run --rm -v "$PWD:/repo:ro"
+          aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          fs --scanners vuln,misconfig --exit-code 0 --skip-dirs /repo/.git
+          --skip-dirs /repo/graphify-out --skip-dirs /repo/.worktrees /repo
+      - name: Report explicitly requested immutable container image
+        if: github.event_name == 'workflow_dispatch' && inputs.image != ''
+        env:
+          SCAN_IMAGE: ${{ inputs.image }}
+        run: |
+          if ! [[ "$SCAN_IMAGE" =~ ^[a-zA-Z0-9./:_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            exit 1
+          fi
+          docker run --rm \
+            aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image --image-src remote --scanners vuln --exit-code 0 "$SCAN_IMAGE"

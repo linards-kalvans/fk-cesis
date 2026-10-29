@@ -1,4 +1,10 @@
 ---
+- name: Reject debug mode for the production Invoice Ninja application
+  ansible.builtin.assert:
+    that:
+      - football_club_stack_invoiceninja_app_debug | string | lower == 'false'
+    fail_msg: Invoice Ninja uses APP_ENV=production and must have APP_DEBUG=false
+
 - name: Render Docker Compose project
   ansible.builtin.template:
     src: docker-compose.yml.j2
@@ -53,6 +59,17 @@
     group: root
     mode: "0644"
   become: true
+  notify: Restart nginx after stack update
+
+- name: Deploy nginx host proxy startup script
+  ansible.builtin.template:
+    src: start-nginx.sh
+    dest: "{{ football_club_project_dir }}/nginx/start-nginx.sh"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Restart nginx after stack update
 
 - name: Prepare InvoiceNinja Docker volumes
   ansible.builtin.command:
@@ -65,7 +82,7 @@
 - name: Initialize InvoiceNinja storage volume for ninja user
   ansible.builtin.command:
     cmd: >
-      docker run --rm
+      docker run --rm --pull never
       -v {{ football_club_compose_project_name }}_app_storage:/mnt/ninja-volume
       alpine:3.20
       sh -c 'mkdir -p
@@ -88,13 +105,14 @@
     'Downloaded newer image' in football_club_stack_mms_pull_result.stderr or
     'Pull complete' in football_club_stack_mms_pull_result.stderr or
     'Pulling' in football_club_stack_mms_pull_result.stderr
+  when: football_club_stack_pull_mms_images | bool
 
 - name: Start football club stack
   ansible.builtin.command:
     cmd: >
       docker compose -p {{ football_club_compose_project_name }}
       -f {{ football_club_project_dir }}/docker-compose.yml
-      --env-file {{ football_club_project_dir }}/.env up -d
+      --env-file {{ football_club_project_dir }}/.env up -d --pull never
   register: football_club_stack_compose_up_result
   changed_when: >
     'Started' in football_club_stack_compose_up_result.stderr or

@@ -101,7 +101,7 @@ Under **Contacts**, add the child's email. This is required — per [API docs](h
 ```bash
 curl -X POST 'https://YOUR_IN_DOMAIN/api/v1/clients' \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Token: YOUR_API_TOKEN' \
+  -H "X-API-Token: ${INVOICE_NINJA_API_TOKEN}" \
   -H 'X-Requested-With: XMLHttpRequest' \
   -d '{
     "company_name": "Jānis Bērziņš",

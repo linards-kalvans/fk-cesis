@@ -861,7 +861,7 @@ class TestInvoiceNinjaEnvVars(unittest.TestCase):
     _SERVICE_KEY = "invoiceninja"
     _NEEDED_VARS = [
         ("APP_ENV", "production"),
-        ("APP_DEBUG", '"false"'),
+        ("APP_DEBUG", "{{ football_club_stack_invoiceninja_app_debug }}"),
         ("REQUIRE_HTTPS", '"true"'),
         ("IS_DOCKER", '"true"'),
     ]
@@ -926,11 +926,19 @@ class TestInvoiceNinjaEnvVars(unittest.TestCase):
         self._assert_env_var_present("APP_ENV", "production")
 
     def test_invoiceninja_env_app_debug(self):
-        """invoiceninja environment must contain APP_DEBUG: \"false\".
+        """invoiceninja must render a quoted APP_DEBUG from a false default.
 
         Production deployments should never run with debug mode on.
         """
-        self._assert_env_var_present("APP_DEBUG", '"false"')
+        self._assert_env_var_present(
+            "APP_DEBUG", "{{ football_club_stack_invoiceninja_app_debug }}"
+        )
+        self.assertIn(
+            'APP_DEBUG: "{{ football_club_stack_invoiceninja_app_debug }}"',
+            self._extract_service_block(),
+        )
+        defaults = _read("ansible/roles/football_club_stack/defaults/main.yml")
+        self.assertIn('football_club_stack_invoiceninja_app_debug: "false"', defaults)
 
     def test_invoiceninja_env_require_https(self):
         """invoiceninja environment must contain REQUIRE_HTTPS: \"true\".

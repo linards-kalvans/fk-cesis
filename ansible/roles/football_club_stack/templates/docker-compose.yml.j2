@@ -7,11 +7,14 @@ services:
       APP_URL: {{ football_club_stack_invoiceninja_app_url }}
       APP_KEY: ${NINJA_APP_KEY}
       APP_ENV: production
-      APP_DEBUG: true
-      REQUIRE_HTTPS: false
+      APP_DEBUG: "{{ football_club_stack_invoiceninja_app_debug }}"
+      LOG_CHANNEL: stack
+      LOG_LEVEL: warning
+      REQUIRE_HTTPS: "false"
       PHANTOMJS_PDF_GENERATION: false
       PDF_GENERATOR: snappdf
-      TRUSTED_PROXIES: '*'
+      # Nginx normalizes CGI values and removes forwarded headers before PHP.
+      TRUSTED_PROXIES: "127.0.0.1,::1"
       CACHE_DRIVER: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: redis
@@ -80,11 +83,7 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
-    command: >
-      sh -c "addgroup -g 33 -S www-data 2>/dev/null || true;
-      adduser -S -D -H -u 33 -G www-data www-data 2>/dev/null || true;
-      sed -i 's/^user .*/user www-data www-data;/' /etc/nginx/nginx.conf;
-      nginx -g 'daemon off;'"
+    command: ["sh", "/etc/nginx/conf.d/start-nginx.sh"]
     ports:
       - "127.0.0.1:8089:80"
     volumes:
