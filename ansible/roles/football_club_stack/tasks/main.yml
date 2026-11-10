@@ -74,7 +74,7 @@
       /mnt/ninja-volume/framework/views
       /mnt/ninja-volume/logs
       && chown -R 33:33 /mnt/ninja-volume
-      && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
+      && (chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume 2>/dev/null || true)'
   changed_when: false
 
 - name: Pull MMS images

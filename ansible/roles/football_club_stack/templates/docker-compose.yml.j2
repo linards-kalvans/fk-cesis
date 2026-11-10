@@ -53,7 +53,7 @@ services:
         condition: service_healthy
 
   ninja-db:
-    image: mariadb:lts
+    image: mariadb:11
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ninja
