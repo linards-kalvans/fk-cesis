@@ -2,14 +2,35 @@
 football_club_stack_invoiceninja_app_url: >-
   {{ 'http://billing.lan' if football_club_caddy_mode == 'local' else 'https://billing.' ~ football_club_domain }}
 football_club_stack_invoiceninja_app_debug: "false"
-# Image refresh is an explicit maintenance operation, not a deployment side effect.
-football_club_stack_pull_mms_images: false
+# Every general release refreshes registry-backed images before startup. The
+# local InvoiceNinja image remains an explicit, reported exception until a
+# separate isolated acceptance exercise approves a replacement.
+football_club_stack_refresh_services:
+  - ninja-db
+  - ninja-cache
+  - nginx
+  - docuseal
+  - mms-postgres
+  - mms-web
+  - mms-qcluster
+  - invoiceninja
 # Upstream fallback for inventories that do not pin a verified image. Both the
 # local VM and production inventories override this with their own accepted,
 # fully qualified sha256 image ID.
-football_club_stack_invoiceninja_image: "invoiceninja/invoiceninja-debian:latest"
+football_club_stack_invoiceninja_image: "invoiceninja/invoiceninja-debian:5"
+# Conservative MariaDB series fallback; inventories select their verified channel.
+football_club_stack_mariadb_image: "mariadb:11"
+football_club_stack_redis_image: "redis:8-alpine"
+football_club_stack_nginx_image: "nginx:stable-alpine"
+football_club_stack_docuseal_image: "docuseal/docuseal:latest"
+football_club_stack_mms_postgres_image: "postgres:18-alpine"
 football_club_stack_mms_image: "ghcr.io/linards-kalvans/fk-cesis-mms"
 football_club_stack_mms_image_tag: "main"
+# Complete checkpoints require the helper image to be preloaded; no pull occurs.
+football_club_stack_checkpoint_dir: "{{ football_club_project_dir }}/.release-checkpoints"
+football_club_stack_checkpoint_helper_image: "alpine:3"
+football_club_stack_checkpoint_min_free_bytes: 5368709120
+football_club_stack_checkpoint_timeout_seconds: 3600
 football_club_stack_mms_host_port: "8019"
 football_club_stack_mms_db_name: "fkmms"
 football_club_stack_mms_db_user: "fkmms"
@@ -20,13 +41,14 @@ football_club_stack_mms_allowed_hosts: >-
 football_club_stack_mms_csrf_trusted_origins: >-
   {{ 'https://members.lan' if football_club_caddy_mode == 'local' else 'https://members.' ~ football_club_domain }}
 football_club_stack_mms_address_autocomplete_region_codes: "100016487,100015774,100016124,100016085,100015637"
-football_club_stack_mms_docuseal_api_url: "http://docuseal:3000"
-football_club_stack_mms_invoice_ninja_api_url: "http://nginx"
+football_club_stack_mms_docuseal_api_url: "http://docuseal:3000/api"
+football_club_stack_mms_docuseal_template_allowed_origins: ""
+football_club_stack_mms_invoice_ninja_api_url: "http://nginx/api/v1"
 football_club_stack_mms_invoice_ninja_number_prefix: "MMS"
 football_club_stack_mms_billing_autosend_enabled: "false"
 football_club_stack_mms_billing_send_due_hour: "4"
 football_club_stack_mms_billing_payment_sync_hour: "3"
-football_club_stack_mms_ocr_provider_mode: "stub"
+football_club_stack_mms_ocr_provider_mode: "tiny_idp"
 football_club_stack_mms_tiny_idp_api_url: "https://api.tiny-idp.com/api/extractors/run/6a1026aacf9d0065300ef271"
 football_club_stack_mms_email_backend: "django.core.mail.backends.smtp.EmailBackend"
 football_club_stack_mms_email_host: "smtp.gmail.com"
@@ -39,3 +61,8 @@ football_club_stack_mms_superuser_email: ""
 football_club_stack_mms_superuser_username: ""
 football_club_stack_mms_audit_retention_days: "730"
 football_club_stack_mms_audit_prune_hour: "2"
+football_club_stack_mms_analytics_provider: "umami"
+football_club_stack_mms_analytics_browser_enabled: "true"
+football_club_stack_mms_analytics_server_enabled: "true"
+football_club_stack_mms_analytics_api_url: "https://analytics.mplytics.eu"
+football_club_stack_mms_analytics_site_id: ""
