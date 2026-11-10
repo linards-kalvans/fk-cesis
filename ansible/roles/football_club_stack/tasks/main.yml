@@ -5,6 +5,22 @@
       - football_club_stack_invoiceninja_app_debug | string | lower == 'false'
     fail_msg: Invoice Ninja uses APP_ENV=production and must have APP_DEBUG=false
 
+- name: Validate release refresh service selection
+  ansible.builtin.assert:
+    that:
+      - football_club_stack_refresh_services | length == 8
+      - football_club_stack_refresh_services | unique | length == 8
+      - >-
+        football_club_stack_refresh_services | sort | join(',') ==
+        'docuseal,invoiceninja,mms-postgres,mms-qcluster,mms-web,nginx,ninja-cache,ninja-db'
+    fail_msg: >-
+      Refresh exactly the eight registry-backed services: docuseal,
+      mms-postgres, mms-qcluster, mms-web, ninja-cache, ninja-db, nginx, invoiceninja.
+
+- name: Capture private recovery checkpoint before rendering or pulling
+  ansible.builtin.include_tasks: checkpoint.yml
+  when: not ansible_check_mode
+
 - name: Render Docker Compose project
   ansible.builtin.template:
     src: docker-compose.yml.j2
@@ -84,28 +100,29 @@
     cmd: >
       docker run --rm --pull never
       -v {{ football_club_compose_project_name }}_app_storage:/mnt/ninja-volume
-      alpine:3.20
+      {{ football_club_stack_checkpoint_helper_image }}
       sh -c 'mkdir -p
       /mnt/ninja-volume/framework/cache/data
       /mnt/ninja-volume/framework/sessions
       /mnt/ninja-volume/framework/views
       /mnt/ninja-volume/logs
       && chown -R 33:33 /mnt/ninja-volume
-      && chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume'
+      && (chmod -R u+rwX,g+rwX,o-rwx /mnt/ninja-volume 2>/dev/null || true)'
   changed_when: false
 
-- name: Pull MMS images
+- name: Pull all registry-backed release images before startup
   ansible.builtin.command:
     cmd: >
       docker compose -p {{ football_club_compose_project_name }}
       -f {{ football_club_project_dir }}/docker-compose.yml
-      --env-file {{ football_club_project_dir }}/.env pull mms-web mms-qcluster
-  register: football_club_stack_mms_pull_result
+      --env-file {{ football_club_project_dir }}/.env
+      pull --policy always {{ football_club_stack_refresh_services | join(' ') }}
+  register: football_club_stack_release_pull_result
   changed_when: >
-    'Downloaded newer image' in football_club_stack_mms_pull_result.stderr or
-    'Pull complete' in football_club_stack_mms_pull_result.stderr or
-    'Pulling' in football_club_stack_mms_pull_result.stderr
-  when: football_club_stack_pull_mms_images | bool
+    'Downloaded newer image' in football_club_stack_release_pull_result.stderr or
+    'Pull complete' in football_club_stack_release_pull_result.stderr or
+    'Pulling' in football_club_stack_release_pull_result.stderr
+  when: not ansible_check_mode
 
 - name: Start football club stack
   ansible.builtin.command:
@@ -119,4 +136,22 @@
     'Created' in football_club_stack_compose_up_result.stderr or
     'Recreated' in football_club_stack_compose_up_result.stderr
   no_log: false
+  when: not ansible_check_mode
   notify: Restart nginx after stack update
+
+- name: Record post-start image identities without secrets
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - "{{ football_club_stack_checkpoint_dir }}/checkpoint.py"
+      - --project
+      - "{{ football_club_compose_project_name }}"
+      - --timeout
+      - "{{ football_club_stack_checkpoint_timeout_seconds | string }}"
+      - --checkpoint-dir
+      - "{{ football_club_stack_checkpoint_dir }}"
+      - record
+  register: football_club_stack_image_record_result
+  changed_when: false
+  when: not ansible_check_mode
+  become: true
