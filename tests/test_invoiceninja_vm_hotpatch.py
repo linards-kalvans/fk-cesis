@@ -56,11 +56,12 @@ VM_IMAGE_ID = (
 LOCAL_CANDIDATE_ID = (
     "sha256:68921270adf885a6fcedee6fde24851be517dd6d6b5579df731b688516c7d248"
 )
-PROD_IMAGE_ID = (
-    "sha256:b8e368e6fa68c2a715d0100455f06e17827d4652398c63e2fcaed092f2b0632e"
+PROD_IMAGE_REF = (
+    "invoiceninja/invoiceninja-debian@"
+    "sha256:ac7eef4794afb978ee72f317f2af2fd34d71fe557b438f19a312dea2f0597a0a"
 )
 # Accepted local source for the production image: config descriptor/blob digest,
-# not the Docker 29 production-native image ID the inventory pins.
+# not the registry digest the production inventory pins today.
 LOCAL_PROD_SOURCE_ID = (
     "sha256:14c1af817177f9c81bbeef6a5b3964ed478b5462776b9ed909c6115f1b72b2b6"
 )
@@ -151,9 +152,8 @@ class TestImageSelection(unittest.TestCase):
         self.assertEqual(self.vm.get(VAR), VM_IMAGE_ID)
         self.assertNotEqual(self.vm.get(VAR), LOCAL_CANDIDATE_ID)
 
-    def test_production_inventory_pins_the_verified_native_image(self):
-        self.assertTrue(SHA256_ID.match(self.prod.get(VAR, "")), self.prod.get(VAR))
-        self.assertEqual(self.prod.get(VAR), PROD_IMAGE_ID)
+    def test_production_inventory_pins_the_verified_registry_digest(self):
+        self.assertEqual(self.prod.get(VAR), PROD_IMAGE_REF)
         self.assertNotEqual(self.prod.get(VAR), LOCAL_PROD_SOURCE_ID)
         self.assertNotEqual(self.prod.get(VAR), VM_IMAGE_ID)
 
@@ -161,7 +161,7 @@ class TestImageSelection(unittest.TestCase):
         for digest in (LOCAL_CANDIDATE_ID, LOCAL_PROD_SOURCE_ID, VM_IMAGE_ID):
             with self.subTest(inventory="production", digest=digest):
                 self.assertNotIn(digest, self.prod_text)
-        for digest in (PROD_IMAGE_ID, LOCAL_CANDIDATE_ID, LOCAL_PROD_SOURCE_ID):
+        for digest in (PROD_IMAGE_REF, LOCAL_CANDIDATE_ID, LOCAL_PROD_SOURCE_ID):
             with self.subTest(inventory="local_vm", digest=digest):
                 self.assertNotIn(digest, self.vm_text)
 
@@ -177,9 +177,9 @@ class TestImageSelection(unittest.TestCase):
         rendered = _render(self.compose_text, {**self.defaults, **self.vm})
         self.assertEqual(_invoiceninja_image(rendered), VM_IMAGE_ID)
 
-    def test_production_render_selects_the_verified_production_native_image(self):
+    def test_production_render_selects_the_verified_registry_digest(self):
         rendered = _render(self.compose_text, {**self.defaults, **self.prod})
-        self.assertEqual(_invoiceninja_image(rendered), PROD_IMAGE_ID)
+        self.assertEqual(_invoiceninja_image(rendered), PROD_IMAGE_REF)
 
     def test_vm_and_production_render_different_images(self):
         vm_render = _render(self.compose_text, {**self.defaults, **self.vm})
@@ -188,7 +188,7 @@ class TestImageSelection(unittest.TestCase):
         prod_image = _invoiceninja_image(prod_render)
         self.assertNotEqual(vm_image, prod_image)
         self.assertEqual(vm_image, VM_IMAGE_ID)
-        self.assertEqual(prod_image, PROD_IMAGE_ID)
+        self.assertEqual(prod_image, PROD_IMAGE_REF)
 
 
 class TestDisposableSmokeScript(unittest.TestCase):

@@ -132,6 +132,15 @@ openssl rand -base64 64
 
 Never commit live secrets or plaintext vault contents.
 
+## Production inventory
+
+Set `FK_CESIS_PRODUCTION_HOST` in the deploy controller's environment to the
+approved production SSH hostname. The tracked inventory uses this value and
+connects as `deploy`; there is no fallback hostname. Keep the hostname in the
+controller configuration and use the same inventory and environment for checks
+and any separately approved rollout. Supply Vault credentials through the
+approved controller mechanism, not the repository or chat.
+
 ## Retry / dry-run
 
 After every Ansible change, before applying:
